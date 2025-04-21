@@ -24,6 +24,6 @@ NOTE: Set it to "false" or only "" to not use the client folder, so everything w
 		}
 	],
 	"clientFolder": "Tibia",
-	"newClientUrl" : "https://github.com/gpontespc/canary-launcher/releases/download/1.0.0/balrogot-1405.zip",
+	"newClientUrl" : "https://github.com/gpontespc/canary-launcher/releases/download/1.0.1/balrogot-1405.zip",
 	"clientExecutable": "client.exe"
 }
