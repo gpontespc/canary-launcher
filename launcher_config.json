@@ -1,5 +1,5 @@
 {
-	"clientVersion": "14.05.20250606",
+	"clientVersion": "14.05.20250607",
 	"launcherVersion": "1.0",
 	"replaceFolders": true,
 	"replaceFolderName": [
@@ -14,6 +14,6 @@
 		}
 	],
 	"clientFolder": "Tibia",
-	"newClientUrl" : "http://balrogot.com.br/download-client/balrogot-1405.zip",
+	"newClientUrl" : "https://balrogot.com.br/download-client/balrogot-1405.zip",
 	"clientExecutable": "client.exe"
 }
