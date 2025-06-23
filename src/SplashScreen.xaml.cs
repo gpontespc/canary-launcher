@@ -54,13 +54,26 @@ namespace CanaryLauncherUpdate
 			return "";
 		}
 
-		private void StartClient()
-		{
-			if (File.Exists(GetLauncherPath() + "/bin/" + clientExecutableName)) {
-				Process.Start(GetLauncherPath() + "/bin/" + clientExecutableName);
-				this.Close();
-			}
-		}
+                private void StartClient()
+                {
+                        if (File.Exists(GetLauncherPath() + "/bin/" + clientExecutableName)) {
+                                Process process = Process.Start(GetLauncherPath() + "/bin/" + clientExecutableName);
+                                if (process != null)
+                                {
+                                        try
+                                        {
+                                                ProcessPriorityClass priority = ProcessPriorityClass.High;
+                                                if (!string.IsNullOrEmpty(clientConfig.clientPriority))
+                                                {
+                                                        Enum.TryParse(clientConfig.clientPriority, true, out priority);
+                                                }
+                                                process.PriorityClass = priority;
+                                        }
+                                        catch (Exception) { }
+                                }
+                                this.Close();
+                        }
+                }
 
 		public SplashScreen()
 		{

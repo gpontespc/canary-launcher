@@ -40,17 +40,39 @@ namespace CanaryLauncherUpdate
                         new[] { "conf", "characterdata" },
                         StringComparer.OrdinalIgnoreCase);
 
-		private string GetLauncherPath(bool onlyBaseDirectory = false)
-		{
-			string launcherPath = "";
-			if (string.IsNullOrEmpty(clientConfig.clientFolder) || onlyBaseDirectory) {
-				launcherPath = AppDomain.CurrentDomain.BaseDirectory.ToString();
-			} else {
-				launcherPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + "/" + clientConfig.clientFolder;
-			}
+                private string GetLauncherPath(bool onlyBaseDirectory = false)
+                {
+                        string launcherPath = "";
+                        if (string.IsNullOrEmpty(clientConfig.clientFolder) || onlyBaseDirectory) {
+                                launcherPath = AppDomain.CurrentDomain.BaseDirectory.ToString();
+                        } else {
+                                launcherPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + "/" + clientConfig.clientFolder;
+                        }
 
-			return launcherPath;
-		}
+                        return launcherPath;
+                }
+
+                private void LaunchClient()
+                {
+                        string path = GetLauncherPath() + "/bin/" + clientExecutableName;
+                        if (File.Exists(path))
+                        {
+                                Process process = Process.Start(path);
+                                if (process != null)
+                                {
+                                        try
+                                        {
+                                                ProcessPriorityClass priority = ProcessPriorityClass.High;
+                                                if (!string.IsNullOrEmpty(clientConfig.clientPriority))
+                                                {
+                                                        Enum.TryParse(clientConfig.clientPriority, true, out priority);
+                                                }
+                                                process.PriorityClass = priority;
+                                        }
+                                        catch (Exception) { }
+                                }
+                        }
+                }
 
 		public MainWindow()
 		{
@@ -162,26 +184,26 @@ namespace CanaryLauncherUpdate
 			webClient.DownloadFileAsync(new Uri(urlClient), GetLauncherPath() + "/tibia.zip");
 		}
 
-		private void buttonPlay_Click(object sender, RoutedEventArgs e)
-		{
-			if (needUpdate == true || !Directory.Exists(GetLauncherPath()))
-			{
-				try
-				{
-					UpdateClient();
-				}
-				catch (Exception ex)
-				{
-					labelVersion.Text = ex.ToString();
-				}
-			}
-			else
-			{
-				if (clientDownloaded == true || !Directory.Exists(GetLauncherPath(true)))
-				{
-					Process.Start(GetLauncherPath() + "/bin/" + clientExecutableName);
-					this.Close();
-				}
+        private void buttonPlay_Click(object sender, RoutedEventArgs e)
+        {
+                if (needUpdate == true || !Directory.Exists(GetLauncherPath()))
+                {
+                        try
+                        {
+                                UpdateClient();
+                        }
+                        catch (Exception ex)
+                        {
+                                labelVersion.Text = ex.ToString();
+                        }
+                }
+                else
+                {
+                        if (clientDownloaded == true || !Directory.Exists(GetLauncherPath(true)))
+                        {
+                                LaunchClient();
+                                this.Close();
+                        }
 				else
 				{
 					try
