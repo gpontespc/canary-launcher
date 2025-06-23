@@ -230,8 +230,8 @@ namespace CanaryLauncherUpdate
 
                 using (ZipArchive archive = ZipFile.OpenRead(path))
                 {
-                        int total = archive.Entries.Count;
-                        int current = 0;
+                        long totalBytes = archive.Entries.Sum(e => e.Length);
+                        long processedBytes = 0;
 
                         foreach (ZipArchiveEntry entry in archive.Entries)
                         {
@@ -240,8 +240,8 @@ namespace CanaryLauncherUpdate
                                 // skip entries from protected folders that already exist
                                 if (parts.Length > 0 && alreadyPresent.Contains(parts[0]))
                                 {
-                                        current++;
-                                        progress?.Report((int)(current * 100.0 / total));
+                                        processedBytes += entry.Length;
+                                        progress?.Report((int)(processedBytes * 100.0 / totalBytes));
                                         continue;
                                 }
 
@@ -251,13 +251,27 @@ namespace CanaryLauncherUpdate
                                 {
                                         Directory.CreateDirectory(directory);
                                 }
+
                                 if (!string.IsNullOrEmpty(entry.Name))
                                 {
-                                        entry.ExtractToFile(destination, true);
+                                        using (var entryStream = entry.Open())
+                                        using (var destStream = File.Create(destination))
+                                        {
+                                                byte[] buffer = new byte[81920];
+                                                int bytesRead;
+                                                while ((bytesRead = entryStream.Read(buffer, 0, buffer.Length)) > 0)
+                                                {
+                                                        destStream.Write(buffer, 0, bytesRead);
+                                                        processedBytes += bytesRead;
+                                                        progress?.Report((int)(processedBytes * 100.0 / totalBytes));
+                                                }
+                                        }
                                 }
-
-                                current++;
-                                progress?.Report((int)(current * 100.0 / total));
+                                else
+                                {
+                                        // directory entry
+                                        Directory.CreateDirectory(destination);
+                                }
                         }
                 }
         }
