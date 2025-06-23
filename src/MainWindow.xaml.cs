@@ -13,7 +13,7 @@ using System.Diagnostics;
 using Newtonsoft.Json;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Ionic.Zip;
+using System.IO.Compression;
 using LauncherConfig;
 
 namespace CanaryLauncherUpdate
@@ -191,19 +191,32 @@ namespace CanaryLauncherUpdate
 			}
 		}
 
-		private void ExtractZip(string path, ExtractExistingFileAction existingFileAction)
-		{
-			using (ZipFile modZip = ZipFile.Read(path))
-			{
-				foreach (ZipEntry zipEntry in modZip)
-				{
-					zipEntry.Extract(GetLauncherPath(), existingFileAction);
-				}
-			}
-		}
+        private void ExtractZip(string path, IProgress<int> progress)
+        {
+                using (ZipArchive archive = ZipFile.OpenRead(path))
+                {
+                        int total = archive.Entries.Count;
+                        int current = 0;
+                foreach (ZipArchiveEntry entry in archive.Entries)
+                {
+                        string destination = Path.Combine(GetLauncherPath(), entry.FullName);
+                        var directory = Path.GetDirectoryName(destination);
+                        if (!string.IsNullOrEmpty(directory))
+                        {
+                                Directory.CreateDirectory(directory);
+                        }
+                        if (!string.IsNullOrEmpty(entry.Name))
+                        {
+                                entry.ExtractToFile(destination, true);
+                        }
+                        current++;
+                        progress?.Report((int)(current * 100.0 / total));
+                }
+                }
+        }
 
-		private async void Client_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
-		{
+        private async void Client_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
+        {
 			buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_play.png")));
 			buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_play.png"));
 
@@ -219,14 +232,20 @@ namespace CanaryLauncherUpdate
 				}
 			}
 
-			// Adds the task to a secondary task to prevent the program from crashing while this is running
-			await Task.Run(() =>
-			{
-				Directory.CreateDirectory(GetLauncherPath());
-				ExtractZip(GetLauncherPath() + "/tibia.zip", ExtractExistingFileAction.OverwriteSilently);
-				File.Delete(GetLauncherPath() + "/tibia.zip");
-			});
-			progressbarDownload.Value = 100;
+            progressbarDownload.Value = 0;
+            labelDownloadPercent.Content = "Extracting 0%";
+            var progress = new Progress<int>(value =>
+            {
+                    progressbarDownload.Value = value;
+                    labelDownloadPercent.Content = $"Extracting {value}%";
+            });
+
+            await Task.Run(() =>
+            {
+                    Directory.CreateDirectory(GetLauncherPath());
+                    ExtractZip(GetLauncherPath() + "/tibia.zip", progress);
+            });
+            File.Delete(GetLauncherPath() + "/tibia.zip");
 
 			// Download launcher_config.json from url to the launcher path
 			WebClient webClient = new WebClient();
