@@ -32,8 +32,13 @@ namespace CanaryLauncherUpdate
 		bool clientDownloaded = false;
 		bool needUpdate = false;
 
-		static readonly HttpClient httpClient = new HttpClient();
-		WebClient webClient = new WebClient();
+                static readonly HttpClient httpClient = new HttpClient();
+                WebClient webClient = new WebClient();
+
+                // folders that should never be overwritten once created
+                private static readonly HashSet<string> PreserveFolders = new HashSet<string>(
+                        new[] { "conf", "characterdata" },
+                        StringComparer.OrdinalIgnoreCase);
 
 		private string GetLauncherPath(bool onlyBaseDirectory = false)
 		{
@@ -193,25 +198,45 @@ namespace CanaryLauncherUpdate
 
         private void ExtractZip(string path, IProgress<int> progress)
         {
+                // track which protected folders already existed before extraction
+                var alreadyPresent = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var folder in PreserveFolders)
+                {
+                        if (Directory.Exists(Path.Combine(GetLauncherPath(), folder)))
+                                alreadyPresent.Add(folder);
+                }
+
                 using (ZipArchive archive = ZipFile.OpenRead(path))
                 {
                         int total = archive.Entries.Count;
                         int current = 0;
-                foreach (ZipArchiveEntry entry in archive.Entries)
-                {
-                        string destination = Path.Combine(GetLauncherPath(), entry.FullName);
-                        var directory = Path.GetDirectoryName(destination);
-                        if (!string.IsNullOrEmpty(directory))
+
+                        foreach (ZipArchiveEntry entry in archive.Entries)
                         {
-                                Directory.CreateDirectory(directory);
+                                string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+
+                                // skip entries from protected folders that already exist
+                                if (parts.Length > 0 && alreadyPresent.Contains(parts[0]))
+                                {
+                                        current++;
+                                        progress?.Report((int)(current * 100.0 / total));
+                                        continue;
+                                }
+
+                                string destination = Path.Combine(GetLauncherPath(), entry.FullName);
+                                var directory = Path.GetDirectoryName(destination);
+                                if (!string.IsNullOrEmpty(directory))
+                                {
+                                        Directory.CreateDirectory(directory);
+                                }
+                                if (!string.IsNullOrEmpty(entry.Name))
+                                {
+                                        entry.ExtractToFile(destination, true);
+                                }
+
+                                current++;
+                                progress?.Report((int)(current * 100.0 / total));
                         }
-                        if (!string.IsNullOrEmpty(entry.Name))
-                        {
-                                entry.ExtractToFile(destination, true);
-                        }
-                        current++;
-                        progress?.Report((int)(current * 100.0 / total));
-                }
                 }
         }
 
