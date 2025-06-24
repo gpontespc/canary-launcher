@@ -56,6 +56,7 @@
     <Compile Include="src\App.xaml.cs" />
     <Compile Include="src\AssemblyInfo.cs" />
     <Compile Include="src\ClientConfig.cs" />
+    <Compile Include="src\LauncherUtils.cs" />
     <Compile Include="src\MainWindow.xaml.cs" />
     <Compile Include="src\SplashScreen.xaml.cs" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />

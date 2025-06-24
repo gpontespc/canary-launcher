@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Windows;
-using System.Net;
-using System.IO;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -21,15 +18,22 @@ namespace LauncherConfig
                 public string clientExecutable { get; set; }
                 public string clientPriority { get; set; }
 
-		public static ClientConfig loadFromFile(string url)
-		{
-			using (HttpClient client = new HttpClient())
-			{
-				Task<string> jsonTask = client.GetStringAsync(url);
-				string jsonString = jsonTask.Result;
-				return JsonConvert.DeserializeObject<ClientConfig>(jsonString);
-			}
-		}
+                public static ClientConfig loadFromFile(string url)
+                {
+                        using (HttpClient client = new HttpClient())
+                        {
+                                Task<string> jsonTask = client.GetStringAsync(url);
+                                string jsonString = jsonTask.Result;
+                                return JsonConvert.DeserializeObject<ClientConfig>(jsonString);
+                        }
+                }
+
+                public static async Task<ClientConfig> LoadFromUrlAsync(string url)
+                {
+                        using HttpClient client = new HttpClient();
+                        string jsonString = await client.GetStringAsync(url).ConfigureAwait(false);
+                        return JsonConvert.DeserializeObject<ClientConfig>(jsonString);
+                }
 	}
 
 	public class ReplaceFolderName

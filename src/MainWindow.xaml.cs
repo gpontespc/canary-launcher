@@ -10,7 +10,6 @@ using System.Net;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
-using Newtonsoft.Json;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO.Compression;
@@ -40,39 +39,6 @@ namespace CanaryLauncherUpdate
                         new[] { "conf", "characterdata" },
                         StringComparer.OrdinalIgnoreCase);
 
-                private string GetLauncherPath(bool onlyBaseDirectory = false)
-                {
-                        string launcherPath = "";
-                        if (string.IsNullOrEmpty(clientConfig.clientFolder) || onlyBaseDirectory) {
-                                launcherPath = AppDomain.CurrentDomain.BaseDirectory.ToString();
-                        } else {
-                                launcherPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + "/" + clientConfig.clientFolder;
-                        }
-
-                        return launcherPath;
-                }
-
-                private void LaunchClient()
-                {
-                        string path = GetLauncherPath() + "/bin/" + clientExecutableName;
-                        if (File.Exists(path))
-                        {
-                                Process process = Process.Start(path);
-                                if (process != null)
-                                {
-                                        try
-                                        {
-                                                ProcessPriorityClass priority = ProcessPriorityClass.High;
-                                                if (!string.IsNullOrEmpty(clientConfig.clientPriority))
-                                                {
-                                                        Enum.TryParse(clientConfig.clientPriority, true, out priority);
-                                                }
-                                                process.PriorityClass = priority;
-                                        }
-                                        catch (Exception) { }
-                                }
-                        }
-                }
 
 		public MainWindow()
 		{
@@ -108,10 +74,10 @@ namespace CanaryLauncherUpdate
 			labelClientVersion.Visibility = Visibility.Collapsed;
 			labelDownloadPercent.Visibility = Visibility.Collapsed;
 
-			if (File.Exists(GetLauncherPath(true) + "/launcher_config.json"))
-			{
-				// Read actual client version
-				string actualVersion = GetClientVersion(GetLauncherPath(true));
+                        if (File.Exists(LauncherUtils.GetLauncherPath(clientConfig, true) + "/launcher_config.json"))
+                        {
+                                // Read actual client version
+                                string actualVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
 				labelVersion.Text = "v" + programVersion;
 
 				if (newVersion != actualVersion)
@@ -125,8 +91,11 @@ namespace CanaryLauncherUpdate
 					needUpdate = true;
 				}
 			}
-			if (!File.Exists(GetLauncherPath(true) + "/launcher_config.json") || Directory.Exists(GetLauncherPath()) && Directory.GetFiles(GetLauncherPath()).Length == 0 && Directory.GetDirectories(GetLauncherPath()).Length == 0)
-			{
+                        if (!File.Exists(LauncherUtils.GetLauncherPath(clientConfig, true) + "/launcher_config.json") ||
+                            Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)) &&
+                            Directory.GetFiles(LauncherUtils.GetLauncherPath(clientConfig)).Length == 0 &&
+                            Directory.GetDirectories(LauncherUtils.GetLauncherPath(clientConfig)).Length == 0)
+                        {
 				labelVersion.Text = "v" + programVersion;
 				buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_update.png")));
 				buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_update.png"));
@@ -138,32 +107,19 @@ namespace CanaryLauncherUpdate
 			}
 		}
 
-		static string GetClientVersion(string path)
-		{
-			string json = path + "/launcher_config.json";
-			StreamReader stream = new StreamReader(json);
-			dynamic jsonString = stream.ReadToEnd();
-			dynamic versionclient = JsonConvert.DeserializeObject(jsonString);
-			foreach (string version in versionclient)
-			{
-				return version;
-			}
-
-			return "";
-		}
 
 		private void AddReadOnly()
 		{
 			// If the files "eventschedule/boostedcreature/onlinenumbers" exist, set them as read-only
-			string eventSchedulePath = GetLauncherPath() + "/cache/eventschedule.json";
+                        string eventSchedulePath = LauncherUtils.GetLauncherPath(clientConfig) + "/cache/eventschedule.json";
 			if (File.Exists(eventSchedulePath)) {
 				File.SetAttributes(eventSchedulePath, FileAttributes.ReadOnly);
 			}
-			string boostedCreaturePath = GetLauncherPath() + "/cache/boostedcreature.json";
+                        string boostedCreaturePath = LauncherUtils.GetLauncherPath(clientConfig) + "/cache/boostedcreature.json";
 			if (File.Exists(boostedCreaturePath)) {
 				File.SetAttributes(boostedCreaturePath, FileAttributes.ReadOnly);
 			}
-			string onlineNumbersPath = GetLauncherPath() + "/cache/onlinenumbers.json";
+                        string onlineNumbersPath = LauncherUtils.GetLauncherPath(clientConfig) + "/cache/onlinenumbers.json";
 			if (File.Exists(onlineNumbersPath)) {
 				File.SetAttributes(onlineNumbersPath, FileAttributes.ReadOnly);
 			}
@@ -171,22 +127,22 @@ namespace CanaryLauncherUpdate
 
 		private void UpdateClient()
 		{
-			if (!Directory.Exists(GetLauncherPath(true)))
-			{
-				Directory.CreateDirectory(GetLauncherPath());
-			}
+                        if (!Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig, true)))
+                        {
+                                Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
+                        }
 			labelDownloadPercent.Visibility = Visibility.Visible;
 			progressbarDownload.Visibility = Visibility.Visible;
 			labelClientVersion.Visibility = Visibility.Collapsed;
 			buttonPlay.Visibility = Visibility.Collapsed;
 			webClient.DownloadProgressChanged += Client_DownloadProgressChanged;
 			webClient.DownloadFileCompleted += Client_DownloadFileCompleted;
-			webClient.DownloadFileAsync(new Uri(urlClient), GetLauncherPath() + "/tibia.zip");
+                        webClient.DownloadFileAsync(new Uri(urlClient), LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip");
 		}
 
         private void buttonPlay_Click(object sender, RoutedEventArgs e)
         {
-                if (needUpdate == true || !Directory.Exists(GetLauncherPath()))
+                if (needUpdate == true || !Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)))
                 {
                         try
                         {
@@ -199,9 +155,9 @@ namespace CanaryLauncherUpdate
                 }
                 else
                 {
-                        if (clientDownloaded == true || !Directory.Exists(GetLauncherPath(true)))
+                        if (clientDownloaded == true || !Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig, true)))
                         {
-                                LaunchClient();
+                                LauncherUtils.LaunchClient(Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), "bin", clientExecutableName), clientConfig.clientPriority);
                                 this.Close();
                         }
 				else
@@ -224,7 +180,7 @@ namespace CanaryLauncherUpdate
                 var alreadyPresent = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var folder in PreserveFolders)
                 {
-                        if (Directory.Exists(Path.Combine(GetLauncherPath(), folder)))
+                        if (Directory.Exists(Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), folder)))
                                 alreadyPresent.Add(folder);
                 }
 
@@ -245,7 +201,7 @@ namespace CanaryLauncherUpdate
                                         continue;
                                 }
 
-                                string destination = Path.Combine(GetLauncherPath(), entry.FullName);
+                                string destination = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), entry.FullName);
                                 var directory = Path.GetDirectoryName(destination);
                                 if (!string.IsNullOrEmpty(directory))
                                 {
@@ -285,7 +241,7 @@ namespace CanaryLauncherUpdate
 			{
 				foreach (ReplaceFolderName folderName in clientConfig.replaceFolderName)
 				{
-					string folderPath = Path.Combine(GetLauncherPath(), folderName.name);
+                                    string folderPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), folderName.name);
 					if (Directory.Exists(folderPath))
 					{
 						Directory.Delete(folderPath, true);
@@ -303,14 +259,14 @@ namespace CanaryLauncherUpdate
 
             await Task.Run(() =>
             {
-                    Directory.CreateDirectory(GetLauncherPath());
-                    ExtractZip(GetLauncherPath() + "/tibia.zip", progress);
+                    Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
+                    ExtractZip(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip", progress);
             });
-            File.Delete(GetLauncherPath() + "/tibia.zip");
+            File.Delete(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip");
 
 			// Download launcher_config.json from url to the launcher path
 			WebClient webClient = new WebClient();
-			string localPath = Path.Combine(GetLauncherPath(true), "launcher_config.json");
+                        string localPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig, true), "launcher_config.json");
 			webClient.DownloadFile(launcerConfigUrl, localPath);
 
 			AddReadOnly();
@@ -318,8 +274,8 @@ namespace CanaryLauncherUpdate
 
 			needUpdate = false;
 			clientDownloaded = true;
-			labelClientVersion.Content = GetClientVersion(GetLauncherPath(true));
-			buttonPlay_tooltip.Text = GetClientVersion(GetLauncherPath(true));
+                        labelClientVersion.Content = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
+                        buttonPlay_tooltip.Text = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
 			labelClientVersion.Visibility = Visibility.Visible;
 			buttonPlay.Visibility = Visibility.Visible;
 			progressbarDownload.Visibility = Visibility.Collapsed;
@@ -358,9 +314,9 @@ namespace CanaryLauncherUpdate
 
 		private void buttonPlay_MouseEnter(object sender, MouseEventArgs e)
 		{
-			if (File.Exists(GetLauncherPath() + "/launcher_config.json"))
-			{
-				string actualVersion = GetClientVersion(GetLauncherPath(true));
+                        if (File.Exists(LauncherUtils.GetLauncherPath(clientConfig) + "/launcher_config.json"))
+                        {
+                                string actualVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
 				if (newVersion != actualVersion)
 				{
 					buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_hover_update.png")));
@@ -378,9 +334,9 @@ namespace CanaryLauncherUpdate
 
 		private void buttonPlay_MouseLeave(object sender, MouseEventArgs e)
 		{
-			if (File.Exists(GetLauncherPath(true) + "/launcher_config.json"))
-			{
-				string actualVersion = GetClientVersion(GetLauncherPath(true));
+                        if (File.Exists(LauncherUtils.GetLauncherPath(clientConfig, true) + "/launcher_config.json"))
+                        {
+                                string actualVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
 				if (newVersion != actualVersion)
 				{
 					buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_update.png")));
