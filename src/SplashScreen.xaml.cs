@@ -11,7 +11,6 @@ using System.Windows.Navigation;
 using System.IO.Compression;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using LauncherConfig;
 
 namespace CanaryLauncherUpdate
@@ -28,52 +27,6 @@ namespace CanaryLauncherUpdate
 		static readonly HttpClient httpClient = new HttpClient();
 		DispatcherTimer timer = new DispatcherTimer();
 
-		private string GetLauncherPath(bool onlyBaseDirectory = false)
-		{
-			string launcherPath = "";
-			if (string.IsNullOrEmpty(clientConfig.clientFolder) || onlyBaseDirectory) {
-				launcherPath = AppDomain.CurrentDomain.BaseDirectory.ToString();
-			} else {
-				launcherPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + "/" + clientConfig.clientFolder;
-			}
-
-			return launcherPath;
-		}
-
-		static string GetClientVersion(string path)
-		{
-			string json = path + "/launcher_config.json";
-			StreamReader stream = new StreamReader(json);
-			dynamic jsonString = stream.ReadToEnd();
-			dynamic versionclient = JsonConvert.DeserializeObject(jsonString);
-			foreach (string version in versionclient)
-			{
-				return version;
-			}
-
-			return "";
-		}
-
-                private void StartClient()
-                {
-                        if (File.Exists(GetLauncherPath() + "/bin/" + clientExecutableName)) {
-                                Process process = Process.Start(GetLauncherPath() + "/bin/" + clientExecutableName);
-                                if (process != null)
-                                {
-                                        try
-                                        {
-                                                ProcessPriorityClass priority = ProcessPriorityClass.High;
-                                                if (!string.IsNullOrEmpty(clientConfig.clientPriority))
-                                                {
-                                                        Enum.TryParse(clientConfig.clientPriority, true, out priority);
-                                                }
-                                                process.PriorityClass = priority;
-                                        }
-                                        catch (Exception) { }
-                                }
-                                this.Close();
-                        }
-                }
 
 		public SplashScreen()
 		{
@@ -84,12 +37,13 @@ namespace CanaryLauncherUpdate
 			}
 
 			// Start the client if the versions are the same
-			if (File.Exists(GetLauncherPath(true) + "/launcher_config.json")) {
-				string actualVersion = GetClientVersion(GetLauncherPath(true));
-				if (newVersion == actualVersion && Directory.Exists(GetLauncherPath()) ) {
-					StartClient();
-				}
-			}
+                        if (File.Exists(LauncherUtils.GetLauncherPath(clientConfig, true) + "/launcher_config.json")) {
+                                string actualVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
+                                if (newVersion == actualVersion && Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)) ) {
+                                        LauncherUtils.LaunchClient(Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), "bin", clientExecutableName), clientConfig.clientPriority);
+                                        this.Close();
+                                }
+                        }
 
 			InitializeComponent();
 			timer.Tick += new EventHandler(timer_SplashScreen);
@@ -106,10 +60,10 @@ namespace CanaryLauncherUpdate
 				this.Close();
 			}
 
-			if (!Directory.Exists(GetLauncherPath()))
-			{
-				Directory.CreateDirectory(GetLauncherPath());
-			}
+                        if (!Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)))
+                        {
+                                Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
+                        }
 			MainWindow mainWindow = new MainWindow();
 			this.Close();
 			mainWindow.Show();
