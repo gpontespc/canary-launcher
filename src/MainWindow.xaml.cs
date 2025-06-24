@@ -210,18 +210,10 @@ namespace CanaryLauncherUpdate
 
                                 if (!string.IsNullOrEmpty(entry.Name))
                                 {
-                                        using (var entryStream = entry.Open())
-                                        using (var destStream = File.Create(destination))
-                                        {
-                                                byte[] buffer = new byte[81920];
-                                                int bytesRead;
-                                                while ((bytesRead = entryStream.Read(buffer, 0, buffer.Length)) > 0)
-                                                {
-                                                        destStream.Write(buffer, 0, bytesRead);
-                                                        processedBytes += bytesRead;
-                                                        progress?.Report((int)(processedBytes * 100.0 / totalBytes));
-                                                }
-                                        }
+                                        // Use built-in extraction method which can be faster than manual streaming
+                                        entry.ExtractToFile(destination, true);
+                                        processedBytes += entry.Length;
+                                        progress?.Report((int)(processedBytes * 100.0 / totalBytes));
                                 }
                                 else
                                 {
