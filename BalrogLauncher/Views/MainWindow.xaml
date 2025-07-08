@@ -1,0 +1,20 @@
+<Window x:Class="BalrogLauncher.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BalrogLauncher.Views"
+        mc:Ignorable="d"
+        Title="Balrog Launcher" Height="450" Width="800">
+    <Grid>
+        <Grid.Background>
+            <ImageBrush ImageSource="Assets/background.jpg" Stretch="UniformToFill"/>
+        </Grid.Background>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="200">
+            <Button Content="Play" Command="{Binding PlayCommand}" Margin="5"/>
+            <Button Content="Buy Coins" Command="{Binding BuyCoinsCommand}" Margin="5"/>
+            <ProgressBar Value="{Binding UpdateProgress}" Height="20" Margin="5"/>
+            <TextBlock Text="{Binding Status}" Foreground="White" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</Window>
