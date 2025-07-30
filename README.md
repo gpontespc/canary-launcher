@@ -1,19 +1,12 @@
-# Canary Launcher Update
-* C# WPF
-* .NET 6.0
+# Balrog Launcher
 
-### Information
+WPF launcher rewritten for .NET 8 using MVVM and dependency injection. Assets are loaded from the `Assets` folder and should be tracked with Git LFS.
 
-* ✅ Launcher like Tibia Global
-* ✅ Download client
-* ✅ Auto check update
-* ✅ Update client
-* ✅ Run the client
+## Build
 
-You must configure the "launcher_config.json" url in MainWindow.cs and SplashScreen.cs
+```
+dotnet publish BalrogLauncher/BalrogLauncher.csproj -c Release -r win-x64 -p:PublishSingleFile=true
+```
 
-In launcher_config.json you need to make necessary settings to use the launcher. (Read the explanation of how to use each configuration)
-
-New configuration option:
-
-* `clientPriority` - sets the priority class used when launching `client.exe`. Accepted values are the names from `ProcessPriorityClass` (for example `High` or `RealTime`).
+## Configuration
+Insert API endpoints, client executable path and patch URLs where marked with `//TODO:` comments in the source.
