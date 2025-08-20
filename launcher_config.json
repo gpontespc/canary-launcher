@@ -1,20 +1,20 @@
 {
-	"clientVersion": "15.02.20250819",
-	"launcherVersion": "1.0",
-	"replaceFolders": true,
-	"replaceFolderName": [
-		{
-			"name": "assets"
-		},
-		{
-			"name": "storeimages"
-		},
-		{
-			"name": "bin"
-		}
-	],
-	"clientFolder": "Tibia",
-        "newClientUrl" : "https://balrogot.com.br/download-client/balrogot-1502.zip",
-        "clientExecutable": "client.exe",
-        "clientPriority": "High"
+  "clientVersion": "15.02.20250820",
+  "launcherVersion": "1.0",
+  "replaceFolders": true,
+  "replaceFolderName": [
+    {
+      "name": "assets"
+    },
+    {
+      "name": "storeimages"
+    },
+    {
+      "name": "bin"
+    }
+  ],
+  "clientFolder": "Tibia",
+  "newClientUrl": "https://balrogot.com.br/download-client/balrogot-1502.zip",
+  "clientExecutable": "client.exe",
+  "clientPriority": "High"
 }
