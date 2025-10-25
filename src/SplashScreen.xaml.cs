@@ -96,14 +96,65 @@ namespace CanaryLauncherUpdate
 
     async Task<ClientConfig> TryLoadLocalConfigAsync()
     {
-      string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "launcher_config.json");
-      if (!File.Exists(localPath))
+      string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+      string localPath = Path.Combine(baseDirectory, "launcher_config.json");
+
+      ClientConfig config = await TryLoadConfigFileAsync(localPath);
+      if (config != null)
+      {
+        return config;
+      }
+
+      try
+      {
+        foreach (string candidate in Directory.EnumerateFiles(baseDirectory, "launcher_config.json", SearchOption.AllDirectories))
+        {
+          if (string.Equals(candidate, localPath, StringComparison.OrdinalIgnoreCase))
+          {
+            continue;
+          }
+
+          config = await TryLoadConfigFileAsync(candidate);
+          if (config == null)
+          {
+            continue;
+          }
+
+          try
+          {
+            Directory.CreateDirectory(Path.GetDirectoryName(localPath));
+            File.Copy(candidate, localPath, true);
+          }
+          catch (IOException)
+          {
+          }
+          catch (UnauthorizedAccessException)
+          {
+          }
+
+          return config;
+        }
+      }
+      catch (IOException)
+      {
+      }
+      catch (UnauthorizedAccessException)
+      {
+      }
+
+      return null;
+    }
+
+    static async Task<ClientConfig> TryLoadConfigFileAsync(string path)
+    {
+      if (string.IsNullOrEmpty(path) || !File.Exists(path))
       {
         return null;
       }
+
       try
       {
-        return await ClientConfig.LoadFromFileAsync(localPath);
+        return await ClientConfig.LoadFromFileAsync(path);
       }
       catch (IOException)
       {
