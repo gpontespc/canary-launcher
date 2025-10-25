@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using CanaryLauncherUpdate;
 
 namespace LauncherConfig
 {
@@ -21,8 +21,7 @@ namespace LauncherConfig
 
                 public static async Task<ClientConfig> LoadFromUrlAsync(string url)
                 {
-                        using HttpClient client = new HttpClient();
-                        string jsonString = await client.GetStringAsync(url).ConfigureAwait(false);
+                        string jsonString = await LauncherUtils.HttpClient.GetStringAsync(url).ConfigureAwait(false);
                         return JsonConvert.DeserializeObject<ClientConfig>(jsonString);
                 }
 

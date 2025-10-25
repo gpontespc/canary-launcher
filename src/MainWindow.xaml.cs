@@ -6,7 +6,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
-using System.Net;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
@@ -20,7 +19,6 @@ namespace CanaryLauncherUpdate
         {
                 const string launcherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
 
-                readonly WebClient webClient = new WebClient();
                 ClientConfig clientConfig;
 
                 string clientExecutableName;
@@ -143,30 +141,78 @@ namespace CanaryLauncherUpdate
 			}
 		}
 
-		private void UpdateClient()
-		{
+                private async Task UpdateClientAsync()
+                {
                         if (!Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig, true)))
                         {
                                 Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
                         }
-			labelDownloadPercent.Visibility = Visibility.Visible;
-			progressbarDownload.Visibility = Visibility.Visible;
+
+                        labelDownloadPercent.Visibility = Visibility.Visible;
+                        progressbarDownload.Visibility = Visibility.Visible;
                         labelClientVersion.Visibility = Visibility.Collapsed;
                         buttonPlay.Visibility = Visibility.Collapsed;
-                        webClient.DownloadProgressChanged -= Client_DownloadProgressChanged;
-                        webClient.DownloadFileCompleted -= Client_DownloadFileCompleted;
-                        webClient.DownloadProgressChanged += Client_DownloadProgressChanged;
-                        webClient.DownloadFileCompleted += Client_DownloadFileCompleted;
-                        webClient.DownloadFileAsync(new Uri(urlClient), LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip");
+                        progressbarDownload.Value = 0;
+
+                        string archivePath = LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip";
+                        long? totalBytes = null;
+
+                        var percentProgress = new Progress<double>(value =>
+                        {
+                                double boundedValue = double.IsNaN(value) ? 0 : Math.Max(0, Math.Min(100, value));
+                                progressbarDownload.Value = boundedValue;
+                                if (boundedValue >= 100 && totalBytes.HasValue)
+                                {
+                                        labelDownloadPercent.Content = "Finishing, wait...";
+                                }
+                        });
+
+                        var bytesProgress = new Progress<LauncherUtils.DownloadBytesProgress>(info =>
+                        {
+                                totalBytes = info.TotalBytes;
+                                if (info.TotalBytes.HasValue)
+                                {
+                                        labelDownloadPercent.Content = SizeSuffix(info.BytesReceived) + " / " + SizeSuffix(info.TotalBytes.Value);
+                                }
+                                else
+                                {
+                                        labelDownloadPercent.Content = SizeSuffix(info.BytesReceived);
+                                }
+                        });
+
+                        try
+                        {
+                                await LauncherUtils.DownloadFileAsync(urlClient, archivePath, percentProgress, bytesProgress);
+                        }
+                        catch (Exception ex)
+                        {
+                                labelVersion.Text = ex.ToString();
+                                progressbarDownload.Visibility = Visibility.Collapsed;
+                                labelDownloadPercent.Visibility = Visibility.Collapsed;
+                                buttonPlay.Visibility = Visibility.Visible;
+                                return;
+                        }
+
+                        try
+                        {
+                                await HandleClientDownloadAsync(archivePath);
+                        }
+                        catch (Exception ex)
+                        {
+                                labelVersion.Text = ex.ToString();
+                                progressbarDownload.Visibility = Visibility.Collapsed;
+                                labelDownloadPercent.Visibility = Visibility.Collapsed;
+                                buttonPlay.Visibility = Visibility.Visible;
+                        }
                 }
 
-        private void buttonPlay_Click(object sender, RoutedEventArgs e)
+        private async void buttonPlay_Click(object sender, RoutedEventArgs e)
         {
                 if (needUpdate == true || !Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)))
                 {
                         try
                         {
-                                UpdateClient();
+                                await UpdateClientAsync();
                         }
                         catch (Exception ex)
                         {
@@ -180,19 +226,19 @@ namespace CanaryLauncherUpdate
                                 LauncherUtils.LaunchClient(Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), "bin", clientExecutableName), clientConfig.clientPriority);
                                 this.Close();
                         }
-				else
-				{
-					try
-					{
-						UpdateClient();
-					}
-					catch (Exception ex)
-					{
-						labelVersion.Text = ex.ToString();
-					}
-				}
-			}
-		}
+                                else
+                                {
+                                        try
+                                        {
+                                                await UpdateClientAsync();
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                                labelVersion.Text = ex.ToString();
+                                        }
+                                }
+                        }
+                }
 
         private void ExtractZip(string path, IProgress<int> progress)
         {
@@ -244,42 +290,62 @@ namespace CanaryLauncherUpdate
                 }
         }
 
-        private async void Client_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
+        private async Task HandleClientDownloadAsync(string archivePath)
         {
-			buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_play.png")));
-			buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_play.png"));
+                        buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_play.png")));
+                        buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_play.png"));
 
-			if (clientConfig.replaceFolders)
-			{
-				foreach (ReplaceFolderName folderName in clientConfig.replaceFolderName)
-				{
-                                    string folderPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), folderName.name);
-					if (Directory.Exists(folderPath))
-					{
-						Directory.Delete(folderPath, true);
-					}
-				}
-			}
+                        if (clientConfig.replaceFolders)
+                        {
+                                foreach (ReplaceFolderName folderName in clientConfig.replaceFolderName)
+                                {
+                                        string folderPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), folderName.name);
+                                        if (Directory.Exists(folderPath))
+                                        {
+                                                Directory.Delete(folderPath, true);
+                                        }
+                                }
+                        }
 
-            progressbarDownload.Value = 0;
-            labelDownloadPercent.Content = "Extracting 0%";
-            var progress = new Progress<int>(value =>
-            {
-                    progressbarDownload.Value = value;
-                    labelDownloadPercent.Content = $"Extracting {value}%";
-            });
+                        progressbarDownload.Value = 0;
+                        labelDownloadPercent.Content = "Extracting 0%";
+                        var progress = new Progress<int>(value =>
+                        {
+                                progressbarDownload.Value = value;
+                                labelDownloadPercent.Content = $"Extracting {value}%";
+                        });
 
-            await Task.Run(() =>
-            {
-                    Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
-                    ExtractZip(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip", progress);
-            });
-            File.Delete(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip");
+                        try
+                        {
+                                await Task.Run(() =>
+                                {
+                                        Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
+                                        ExtractZip(archivePath, progress);
+                                });
+                        }
+                        finally
+                        {
+                                if (File.Exists(archivePath))
+                                {
+                                        try
+                                        {
+                                                File.Delete(archivePath);
+                                        }
+                                        catch (Exception)
+                                        {
+                                        }
+                                }
+                        }
 
-			// Download launcher_config.json from url to the launcher path
-                        WebClient webClient = new WebClient();
                         string localPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig, true), "launcher_config.json");
-                        webClient.DownloadFile(launcherConfigUrl, localPath);
+
+                        try
+                        {
+                                await LauncherUtils.DownloadFileAsync(launcherConfigUrl, localPath);
+                        }
+                        catch (Exception)
+                        {
+                        }
 
                         if (File.Exists(localPath))
                         {
@@ -300,25 +366,16 @@ namespace CanaryLauncherUpdate
                         AddReadOnly();
                         CreateShortcut();
 
-			needUpdate = false;
-			clientDownloaded = true;
-                        labelClientVersion.Content = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
-                        buttonPlay_tooltip.Text = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
-			labelClientVersion.Visibility = Visibility.Visible;
-			buttonPlay.Visibility = Visibility.Visible;
-			progressbarDownload.Visibility = Visibility.Collapsed;
-			labelDownloadPercent.Visibility = Visibility.Collapsed;
-		}
-
-		private void Client_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
-		{
-			progressbarDownload.Value = e.ProgressPercentage;
-			if (progressbarDownload.Value == 100) {
-				labelDownloadPercent.Content = "Finishing, wait...";
-			} else {
-				labelDownloadPercent.Content = SizeSuffix(e.BytesReceived) + " / " + SizeSuffix(e.TotalBytesToReceive);
-			}
-		}
+                        needUpdate = false;
+                        clientDownloaded = true;
+                        string installedVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
+                        labelClientVersion.Content = installedVersion;
+                        buttonPlay_tooltip.Text = installedVersion;
+                        labelClientVersion.Visibility = Visibility.Visible;
+                        buttonPlay.Visibility = Visibility.Visible;
+                        progressbarDownload.Visibility = Visibility.Collapsed;
+                        labelDownloadPercent.Visibility = Visibility.Collapsed;
+        }
 
 		static readonly string[] SizeSuffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
 		static string SizeSuffix(Int64 value, int decimalPlaces = 1)
