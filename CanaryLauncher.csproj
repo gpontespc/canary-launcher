@@ -60,6 +60,7 @@
     <Compile Include="src\MainWindow.xaml.cs" />
     <Compile Include="src\SplashScreen.xaml.cs" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="assets\icons.xaml">
@@ -93,6 +94,11 @@
     <Resource Include="assets\logo.png" />
     <Resource Include="assets\logo_company.png" />
     <Resource Include="assets\rh_lore.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="launcher_config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

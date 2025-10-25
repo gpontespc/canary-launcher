@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -143,7 +144,56 @@ namespace CanaryLauncherUpdate
 			}
 		}
 
-		private void UpdateClient()
+        static string BackupLauncherConfig(string sourcePath)
+        {
+                if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath))
+                        return null;
+
+                try
+                {
+                        string backupPath = Path.Combine(Path.GetTempPath(), "launcher_config_" + Guid.NewGuid().ToString("N") + ".bak");
+                        File.Copy(sourcePath, backupPath, true);
+                        return backupPath;
+                }
+                catch (Exception)
+                {
+                        return null;
+                }
+        }
+
+        static void RestoreLauncherConfig(string backupPath, string destinationPath)
+        {
+                if (string.IsNullOrEmpty(backupPath) || string.IsNullOrEmpty(destinationPath) || File.Exists(destinationPath) || !File.Exists(backupPath))
+                        return;
+
+                try
+                {
+                        string directory = Path.GetDirectoryName(destinationPath);
+                        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                                Directory.CreateDirectory(directory);
+
+                        File.Copy(backupPath, destinationPath, true);
+                }
+                catch (Exception)
+                {
+                }
+        }
+
+        static void CleanupLauncherConfigBackup(string backupPath)
+        {
+                if (string.IsNullOrEmpty(backupPath) || !File.Exists(backupPath))
+                        return;
+
+                try
+                {
+                        File.Delete(backupPath);
+                }
+                catch (Exception)
+                {
+                }
+        }
+
+        private void UpdateClient()
 		{
                         if (!Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig, true)))
                         {
@@ -196,7 +246,6 @@ namespace CanaryLauncherUpdate
 
         private void ExtractZip(string path, IProgress<int> progress)
         {
-                // track which protected folders already existed before extraction
                 var alreadyPresent = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var folder in PreserveFolders)
                 {
@@ -206,50 +255,84 @@ namespace CanaryLauncherUpdate
 
                 using (ZipArchive archive = ZipFile.OpenRead(path))
                 {
-                        long totalBytes = archive.Entries.Sum(e => e.Length);
+                        var entriesToExtract = archive.Entries
+                                .Where(entry =>
+                                {
+                                        string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                                        return parts.Length == 0 || !alreadyPresent.Contains(parts[0]);
+                                })
+                                .ToList();
+
+                        long totalBytes = entriesToExtract.Sum(e => e.Length);
                         long processedBytes = 0;
+                        int lastProgress = -1;
 
-                        foreach (ZipArchiveEntry entry in archive.Entries)
+                        byte[] buffer = ArrayPool<byte>.Shared.Rent(1024 * 1024);
+                        try
                         {
-                                string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                                foreach (ZipArchiveEntry entry in archive.Entries)
+                                {
+                                        string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
 
-                                // skip entries from protected folders that already exist
-                                if (parts.Length > 0 && alreadyPresent.Contains(parts[0]))
-                                {
-                                        processedBytes += entry.Length;
-                                        progress?.Report((int)(processedBytes * 100.0 / totalBytes));
-                                        continue;
-                                }
+                                        if (parts.Length > 0 && alreadyPresent.Contains(parts[0]))
+                                                continue;
 
-                                string destination = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), entry.FullName);
-                                var directory = Path.GetDirectoryName(destination);
-                                if (!string.IsNullOrEmpty(directory))
-                                {
-                                        Directory.CreateDirectory(directory);
-                                }
+                                        string destination = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), entry.FullName);
+                                        var directory = Path.GetDirectoryName(destination);
+                                        if (!string.IsNullOrEmpty(directory))
+                                        {
+                                                Directory.CreateDirectory(directory);
+                                        }
 
-                                if (!string.IsNullOrEmpty(entry.Name))
-                                {
-                                        // Use built-in extraction method which can be faster than manual streaming
-                                        entry.ExtractToFile(destination, true);
-                                        processedBytes += entry.Length;
-                                        progress?.Report((int)(processedBytes * 100.0 / totalBytes));
-                                }
-                                else
-                                {
-                                        // directory entry
-                                        Directory.CreateDirectory(destination);
+                                        if (string.IsNullOrEmpty(entry.Name))
+                                        {
+                                                Directory.CreateDirectory(destination);
+                                                continue;
+                                        }
+
+                                        using (Stream entryStream = entry.Open())
+                                        using (FileStream destinationStream = new FileStream(
+                                                destination,
+                                                FileMode.Create,
+                                                FileAccess.Write,
+                                                FileShare.None,
+                                                buffer.Length,
+                                                FileOptions.SequentialScan))
+                                        {
+                                                int bytesRead;
+                                                while ((bytesRead = entryStream.Read(buffer, 0, buffer.Length)) > 0)
+                                                {
+                                                        destinationStream.Write(buffer, 0, bytesRead);
+                                                        processedBytes += bytesRead;
+                                                        if (totalBytes > 0)
+                                                        {
+                                                                int current = (int)(processedBytes * 100.0 / totalBytes);
+                                                                if (current != lastProgress)
+                                                                {
+                                                                        lastProgress = current;
+                                                                        progress?.Report(current);
+                                                                }
+                                                        }
+                                                }
+                                        }
                                 }
                         }
+                        finally
+                        {
+                                ArrayPool<byte>.Shared.Return(buffer);
+                        }
+
+                        if (lastProgress < 100)
+                                progress?.Report(100);
                 }
         }
 
         private async void Client_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
-			buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_play.png")));
-			buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_play.png"));
+                buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_play.png")));
+                buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_play.png"));
 
-			if (clientConfig.replaceFolders)
+                if (clientConfig.replaceFolders)
 			{
 				foreach (ReplaceFolderName folderName in clientConfig.replaceFolderName)
 				{
@@ -261,25 +344,51 @@ namespace CanaryLauncherUpdate
 				}
 			}
 
-            progressbarDownload.Value = 0;
-            labelDownloadPercent.Content = "Extracting 0%";
-            var progress = new Progress<int>(value =>
-            {
-                    progressbarDownload.Value = value;
-                    labelDownloadPercent.Content = $"Extracting {value}%";
-            });
+                progressbarDownload.Value = 0;
+                labelDownloadPercent.Content = "Extracting 0%";
+                var progress = new Progress<int>(value =>
+                {
+                        progressbarDownload.Value = value;
+                        labelDownloadPercent.Content = $"Extracting {value}%";
+                });
 
-            await Task.Run(() =>
-            {
-                    Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
-                    ExtractZip(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip", progress);
-            });
-            File.Delete(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip");
+                string baseConfigPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig, true), "launcher_config.json");
+                string clientConfigPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), "launcher_config.json");
+                string baseBackup = BackupLauncherConfig(baseConfigPath);
+                string clientBackup = string.Equals(baseConfigPath, clientConfigPath, StringComparison.OrdinalIgnoreCase) ? null : BackupLauncherConfig(clientConfigPath);
 
-			// Download launcher_config.json from url to the launcher path
-                        WebClient webClient = new WebClient();
-                        string localPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig, true), "launcher_config.json");
-                        webClient.DownloadFile(launcherConfigUrl, localPath);
+                try
+                {
+                        await Task.Run(() =>
+                        {
+                                Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
+                                ExtractZip(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip", progress);
+                        });
+                        File.Delete(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip");
+
+                        string localPath = baseConfigPath;
+                        try
+                        {
+                                WebClient webClient = new WebClient();
+                                webClient.DownloadFile(launcherConfigUrl, localPath);
+                        }
+                        catch (Exception)
+                        {
+                        }
+
+                        if (File.Exists(localPath) && !string.Equals(localPath, clientConfigPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                                try
+                                {
+                                        string destinationDirectory = Path.GetDirectoryName(clientConfigPath);
+                                        if (!string.IsNullOrEmpty(destinationDirectory))
+                                                Directory.CreateDirectory(destinationDirectory);
+                                        File.Copy(localPath, clientConfigPath, true);
+                                }
+                                catch (Exception)
+                                {
+                                }
+                        }
 
                         if (File.Exists(localPath))
                         {
@@ -296,11 +405,31 @@ namespace CanaryLauncherUpdate
                                 {
                                 }
                         }
+                }
+                finally
+                {
+                        if (!File.Exists(baseConfigPath))
+                        {
+                                RestoreLauncherConfig(baseBackup, baseConfigPath);
+                                if (!File.Exists(baseConfigPath))
+                                        RestoreLauncherConfig(clientBackup, baseConfigPath);
+                        }
+
+                        if (!File.Exists(clientConfigPath))
+                        {
+                                RestoreLauncherConfig(baseBackup, clientConfigPath);
+                                if (!File.Exists(clientConfigPath))
+                                        RestoreLauncherConfig(clientBackup, clientConfigPath);
+                        }
+
+                        CleanupLauncherConfigBackup(baseBackup);
+                        CleanupLauncherConfigBackup(clientBackup);
+                }
 
                         AddReadOnly();
                         CreateShortcut();
 
-			needUpdate = false;
+                        needUpdate = false;
 			clientDownloaded = true;
                         labelClientVersion.Content = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
                         buttonPlay_tooltip.Text = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
