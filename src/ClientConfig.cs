@@ -28,7 +28,7 @@ namespace LauncherConfig
 
                 public static async Task<ClientConfig> LoadFromFileAsync(string path)
                 {
-                        string jsonString = await File.ReadAllTextAsync(path).ConfigureAwait(false);
+                        string jsonString = await Task.Run(() => File.ReadAllText(path)).ConfigureAwait(false);
                         return JsonConvert.DeserializeObject<ClientConfig>(jsonString);
                 }
 	}
