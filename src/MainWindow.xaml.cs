@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -196,7 +197,6 @@ namespace CanaryLauncherUpdate
 
         private void ExtractZip(string path, IProgress<int> progress)
         {
-                // track which protected folders already existed before extraction
                 var alreadyPresent = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var folder in PreserveFolders)
                 {
@@ -206,41 +206,75 @@ namespace CanaryLauncherUpdate
 
                 using (ZipArchive archive = ZipFile.OpenRead(path))
                 {
-                        long totalBytes = archive.Entries.Sum(e => e.Length);
+                        var entriesToExtract = archive.Entries
+                                .Where(entry =>
+                                {
+                                        string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                                        return parts.Length == 0 || !alreadyPresent.Contains(parts[0]);
+                                })
+                                .ToList();
+
+                        long totalBytes = entriesToExtract.Sum(e => e.Length);
                         long processedBytes = 0;
+                        int lastProgress = -1;
 
-                        foreach (ZipArchiveEntry entry in archive.Entries)
+                        byte[] buffer = ArrayPool<byte>.Shared.Rent(1024 * 1024);
+                        try
                         {
-                                string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                                foreach (ZipArchiveEntry entry in archive.Entries)
+                                {
+                                        string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
 
-                                // skip entries from protected folders that already exist
-                                if (parts.Length > 0 && alreadyPresent.Contains(parts[0]))
-                                {
-                                        processedBytes += entry.Length;
-                                        progress?.Report((int)(processedBytes * 100.0 / totalBytes));
-                                        continue;
-                                }
+                                        if (parts.Length > 0 && alreadyPresent.Contains(parts[0]))
+                                                continue;
 
-                                string destination = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), entry.FullName);
-                                var directory = Path.GetDirectoryName(destination);
-                                if (!string.IsNullOrEmpty(directory))
-                                {
-                                        Directory.CreateDirectory(directory);
-                                }
+                                        string destination = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), entry.FullName);
+                                        var directory = Path.GetDirectoryName(destination);
+                                        if (!string.IsNullOrEmpty(directory))
+                                        {
+                                                Directory.CreateDirectory(directory);
+                                        }
 
-                                if (!string.IsNullOrEmpty(entry.Name))
-                                {
-                                        // Use built-in extraction method which can be faster than manual streaming
-                                        entry.ExtractToFile(destination, true);
-                                        processedBytes += entry.Length;
-                                        progress?.Report((int)(processedBytes * 100.0 / totalBytes));
-                                }
-                                else
-                                {
-                                        // directory entry
-                                        Directory.CreateDirectory(destination);
+                                        if (string.IsNullOrEmpty(entry.Name))
+                                        {
+                                                Directory.CreateDirectory(destination);
+                                                continue;
+                                        }
+
+                                        using (Stream entryStream = entry.Open())
+                                        using (FileStream destinationStream = new FileStream(
+                                                destination,
+                                                FileMode.Create,
+                                                FileAccess.Write,
+                                                FileShare.None,
+                                                buffer.Length,
+                                                FileOptions.SequentialScan))
+                                        {
+                                                int bytesRead;
+                                                while ((bytesRead = entryStream.Read(buffer, 0, buffer.Length)) > 0)
+                                                {
+                                                        destinationStream.Write(buffer, 0, bytesRead);
+                                                        processedBytes += bytesRead;
+                                                        if (totalBytes > 0)
+                                                        {
+                                                                int current = (int)(processedBytes * 100.0 / totalBytes);
+                                                                if (current != lastProgress)
+                                                                {
+                                                                        lastProgress = current;
+                                                                        progress?.Report(current);
+                                                                }
+                                                        }
+                                                }
+                                        }
                                 }
                         }
+                        finally
+                        {
+                                ArrayPool<byte>.Shared.Return(buffer);
+                        }
+
+                        if (lastProgress < 100)
+                                progress?.Report(100);
                 }
         }
 
