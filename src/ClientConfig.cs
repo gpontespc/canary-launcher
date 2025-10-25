@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -18,20 +19,16 @@ namespace LauncherConfig
                 public string clientExecutable { get; set; }
                 public string clientPriority { get; set; }
 
-                public static ClientConfig loadFromFile(string url)
-                {
-                        using (HttpClient client = new HttpClient())
-                        {
-                                Task<string> jsonTask = client.GetStringAsync(url);
-                                string jsonString = jsonTask.Result;
-                                return JsonConvert.DeserializeObject<ClientConfig>(jsonString);
-                        }
-                }
-
                 public static async Task<ClientConfig> LoadFromUrlAsync(string url)
                 {
                         using HttpClient client = new HttpClient();
                         string jsonString = await client.GetStringAsync(url).ConfigureAwait(false);
+                        return JsonConvert.DeserializeObject<ClientConfig>(jsonString);
+                }
+
+                public static async Task<ClientConfig> LoadFromFileAsync(string path)
+                {
+                        string jsonString = await Task.Run(() => File.ReadAllText(path)).ConfigureAwait(false);
                         return JsonConvert.DeserializeObject<ClientConfig>(jsonString);
                 }
 	}
