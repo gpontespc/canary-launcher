@@ -57,9 +57,11 @@ namespace CanaryLauncherUpdate
       if (File.Exists(baseConfigPath))
       {
         string actualVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
-        if (newVersion == actualVersion && Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)))
+        string launcherPath = LauncherUtils.GetLauncherPath(clientConfig);
+        string clientExecutablePath = Path.Combine(launcherPath, "bin", clientConfig.clientExecutable);
+        if (newVersion == actualVersion && Directory.Exists(launcherPath) && File.Exists(clientExecutablePath))
         {
-          LauncherUtils.LaunchClient(Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), "bin", clientConfig.clientExecutable), clientConfig.clientPriority);
+          LauncherUtils.LaunchClient(clientExecutablePath, clientConfig.clientPriority);
           Close();
           return;
         }
