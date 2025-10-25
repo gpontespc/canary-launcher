@@ -76,7 +76,6 @@ namespace CanaryLauncherUpdate
                         {
                                 // Read actual client version
                                 string actualVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
-                                labelVersion.Text = "v" + programVersion;
 
                                 if (newVersion != actualVersion)
                                 {
@@ -94,7 +93,6 @@ namespace CanaryLauncherUpdate
                             Directory.GetFiles(LauncherUtils.GetLauncherPath(clientConfig)).Length == 0 &&
                             Directory.GetDirectories(LauncherUtils.GetLauncherPath(clientConfig)).Length == 0)
                         {
-                                labelVersion.Text = "v" + programVersion;
                                 buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_update.png")));
                                 buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_update.png"));
                                 labelClientVersion.Content = "Download";
@@ -219,7 +217,7 @@ namespace CanaryLauncherUpdate
                         }
                         catch (Exception ex)
                         {
-                                labelVersion.Text = ex.ToString();
+                                MessageBox.Show(ex.ToString(), "Launcher Error", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                 }
                 else
@@ -235,13 +233,13 @@ namespace CanaryLauncherUpdate
 					{
 						UpdateClient();
 					}
-					catch (Exception ex)
-					{
-						labelVersion.Text = ex.ToString();
-					}
-				}
-			}
-		}
+                                        catch (Exception ex)
+                                        {
+                                                MessageBox.Show(ex.ToString(), "Launcher Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                                        }
+                                }
+                        }
+                }
 
         private void ExtractZip(string path, IProgress<int> progress)
         {
@@ -398,7 +396,6 @@ namespace CanaryLauncherUpdate
                                         clientExecutableName = clientConfig.clientExecutable;
                                         urlClient = clientConfig.newClientUrl;
                                         programVersion = clientConfig.launcherVersion;
-                                        labelVersion.Text = "v" + programVersion;
                                 }
                                 catch (Exception)
                                 {
