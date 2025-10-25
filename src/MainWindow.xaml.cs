@@ -144,7 +144,56 @@ namespace CanaryLauncherUpdate
 			}
 		}
 
-		private void UpdateClient()
+        static string BackupLauncherConfig(string sourcePath)
+        {
+                if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath))
+                        return null;
+
+                try
+                {
+                        string backupPath = Path.Combine(Path.GetTempPath(), "launcher_config_" + Guid.NewGuid().ToString("N") + ".bak");
+                        File.Copy(sourcePath, backupPath, true);
+                        return backupPath;
+                }
+                catch (Exception)
+                {
+                        return null;
+                }
+        }
+
+        static void RestoreLauncherConfig(string backupPath, string destinationPath)
+        {
+                if (string.IsNullOrEmpty(backupPath) || string.IsNullOrEmpty(destinationPath) || File.Exists(destinationPath) || !File.Exists(backupPath))
+                        return;
+
+                try
+                {
+                        string directory = Path.GetDirectoryName(destinationPath);
+                        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                                Directory.CreateDirectory(directory);
+
+                        File.Copy(backupPath, destinationPath, true);
+                }
+                catch (Exception)
+                {
+                }
+        }
+
+        static void CleanupLauncherConfigBackup(string backupPath)
+        {
+                if (string.IsNullOrEmpty(backupPath) || !File.Exists(backupPath))
+                        return;
+
+                try
+                {
+                        File.Delete(backupPath);
+                }
+                catch (Exception)
+                {
+                }
+        }
+
+        private void UpdateClient()
 		{
                         if (!Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig, true)))
                         {
@@ -280,10 +329,10 @@ namespace CanaryLauncherUpdate
 
         private async void Client_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
-			buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_play.png")));
-			buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_play.png"));
+                buttonPlay.Background = new ImageBrush(new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/button_play.png")));
+                buttonPlayIcon.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/icon_play.png"));
 
-			if (clientConfig.replaceFolders)
+                if (clientConfig.replaceFolders)
 			{
 				foreach (ReplaceFolderName folderName in clientConfig.replaceFolderName)
 				{
@@ -295,25 +344,51 @@ namespace CanaryLauncherUpdate
 				}
 			}
 
-            progressbarDownload.Value = 0;
-            labelDownloadPercent.Content = "Extracting 0%";
-            var progress = new Progress<int>(value =>
-            {
-                    progressbarDownload.Value = value;
-                    labelDownloadPercent.Content = $"Extracting {value}%";
-            });
+                progressbarDownload.Value = 0;
+                labelDownloadPercent.Content = "Extracting 0%";
+                var progress = new Progress<int>(value =>
+                {
+                        progressbarDownload.Value = value;
+                        labelDownloadPercent.Content = $"Extracting {value}%";
+                });
 
-            await Task.Run(() =>
-            {
-                    Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
-                    ExtractZip(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip", progress);
-            });
-            File.Delete(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip");
+                string baseConfigPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig, true), "launcher_config.json");
+                string clientConfigPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), "launcher_config.json");
+                string baseBackup = BackupLauncherConfig(baseConfigPath);
+                string clientBackup = string.Equals(baseConfigPath, clientConfigPath, StringComparison.OrdinalIgnoreCase) ? null : BackupLauncherConfig(clientConfigPath);
 
-			// Download launcher_config.json from url to the launcher path
-                        WebClient webClient = new WebClient();
-                        string localPath = Path.Combine(LauncherUtils.GetLauncherPath(clientConfig, true), "launcher_config.json");
-                        webClient.DownloadFile(launcherConfigUrl, localPath);
+                try
+                {
+                        await Task.Run(() =>
+                        {
+                                Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
+                                ExtractZip(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip", progress);
+                        });
+                        File.Delete(LauncherUtils.GetLauncherPath(clientConfig) + "/tibia.zip");
+
+                        string localPath = baseConfigPath;
+                        try
+                        {
+                                WebClient webClient = new WebClient();
+                                webClient.DownloadFile(launcherConfigUrl, localPath);
+                        }
+                        catch (Exception)
+                        {
+                        }
+
+                        if (File.Exists(localPath) && !string.Equals(localPath, clientConfigPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                                try
+                                {
+                                        string destinationDirectory = Path.GetDirectoryName(clientConfigPath);
+                                        if (!string.IsNullOrEmpty(destinationDirectory))
+                                                Directory.CreateDirectory(destinationDirectory);
+                                        File.Copy(localPath, clientConfigPath, true);
+                                }
+                                catch (Exception)
+                                {
+                                }
+                        }
 
                         if (File.Exists(localPath))
                         {
@@ -330,11 +405,31 @@ namespace CanaryLauncherUpdate
                                 {
                                 }
                         }
+                }
+                finally
+                {
+                        if (!File.Exists(baseConfigPath))
+                        {
+                                RestoreLauncherConfig(baseBackup, baseConfigPath);
+                                if (!File.Exists(baseConfigPath))
+                                        RestoreLauncherConfig(clientBackup, baseConfigPath);
+                        }
+
+                        if (!File.Exists(clientConfigPath))
+                        {
+                                RestoreLauncherConfig(baseBackup, clientConfigPath);
+                                if (!File.Exists(clientConfigPath))
+                                        RestoreLauncherConfig(clientBackup, clientConfigPath);
+                        }
+
+                        CleanupLauncherConfigBackup(baseBackup);
+                        CleanupLauncherConfigBackup(clientBackup);
+                }
 
                         AddReadOnly();
                         CreateShortcut();
 
-			needUpdate = false;
+                        needUpdate = false;
 			clientDownloaded = true;
                         labelClientVersion.Content = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
                         buttonPlay_tooltip.Text = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
