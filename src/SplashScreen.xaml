@@ -4,7 +4,7 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:local="clr-namespace:CanaryLauncherUpdate"
-		Icon="pack://application:,,,/Assets/launcher_ico.png"
+                Icon="pack://application:,,,/icon.ico"
 		mc:Ignorable="d"
 		Background="Transparent"
 		AllowsTransparency="True"
@@ -14,7 +14,7 @@
 		Title="Loading Launcher" Height="400" Width="800">
 	<Grid>
                 <Image
-                        Height="220"
+                        Height="280"
                         Source="pack://application:,,,/Assets/logo.png"
                         Stretch="Uniform"
 			HorizontalAlignment="Center"
@@ -23,7 +23,7 @@
                 <StackPanel
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Margin="0, 180, 0, 0"
+                        Margin="0, 220, 0, 0"
                         Orientation="Vertical">
                         <TextBlock
                                 x:Name="LoadingMessage"
