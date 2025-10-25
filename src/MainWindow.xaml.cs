@@ -67,7 +67,6 @@ namespace CanaryLauncherUpdate
                         programVersion = clientConfig.launcherVersion;
 
                         ImageLogoServer.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/logo.png"));
-                        ImageLogoCompany.Source = new BitmapImage(new Uri(BaseUriHelper.GetBaseUri(this), "pack://application:,,,/Assets/logo_company.png"));
 
                         progressbarDownload.Visibility = Visibility.Collapsed;
                         labelClientVersion.Visibility = Visibility.Collapsed;

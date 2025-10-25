@@ -33,7 +33,6 @@
 		<Grid.Resources>
 			<BitmapImage x:Key="BackGroundKey" UriSource="pack://application:,,,/Assets/background.jpg"/>
 			<BitmapImage x:Key="LogoKey" UriSource="pack://application:,,,/Assets/logo.png"/>
-			<BitmapImage x:Key="LogoCompanyKey" UriSource="pack://application:,,,/Assets/logo_company.png"/>
 			<BitmapImage x:Key="BGButtonUpdateKey" UriSource="pack://application:,,,/Assets/bg_button_update.png"/>
 			<BitmapImage x:Key="ButtonPlayKey" UriSource="pack://application:,,,/Assets/button_play.png"/>
 			<BitmapImage x:Key="IconPlayKey" UriSource="pack://application:,,,/Assets/icon_play.png"/>
@@ -239,35 +238,23 @@
 			VerticalAlignment="Bottom">
 			<Grid>
 				
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="*"/>
-					<ColumnDefinition Width="*"/>
-					<ColumnDefinition Width="*"/>
-				</Grid.ColumnDefinitions>
+                                <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
 				<Grid.RowDefinitions>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 				
-				<TextBlock
-					Grid.Column="0"
-					x:Name="labelVersion"
-					HorizontalAlignment="Left"
-					VerticalAlignment="Bottom"
-					FontFamily="Verdana"
-					FontSize="12"
-					FontWeight="Bold"
-					Foreground="#747474"
-					Margin="10">Version</TextBlock>
-				<Image
-					x:Name="ImageLogoCompany"
-					Grid.Column="1"
-					Source="{StaticResource LogoCompanyKey}"
-					Height="22"
-					Stretch="Uniform"
-					VerticalAlignment="Top"
-					HorizontalAlignment="Center"
-					Margin="0, 0, 0, 20"/>
+                                <TextBlock
+                                        x:Name="labelVersion"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Bottom"
+                                        FontFamily="Verdana"
+                                        FontSize="12"
+                                        FontWeight="Bold"
+                                        Foreground="#747474"
+                                        Margin="10">Version</TextBlock>
 			</Grid>
 		</StackPanel>
 	</Grid>
