@@ -27,11 +27,10 @@ namespace CanaryLauncherUpdate
 
         static HttpClient CreateHttpClient()
         {
-            var handler = new SocketsHttpHandler
+            ServicePointManager.DefaultConnectionLimit = Math.Max(ServicePointManager.DefaultConnectionLimit, 8);
+
+            var handler = new HttpClientHandler
             {
-                ConnectTimeout = TimeSpan.FromSeconds(30),
-                PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-                MaxConnectionsPerServer = 8,
                 AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip
             };
 
