@@ -16,7 +16,7 @@
 		ResizeMode="NoResize"
 		WindowState="Normal"
 		WindowStartupLocation="CenterScreen"
-                Title="Tibia Launcher"
+                Title="BalrogOT Launcher"
                 Loaded="MainWindow_Loaded">
 	<Grid>
 
@@ -233,29 +233,5 @@
 			</Grid>
 		</StackPanel>
 		
-		<StackPanel
-			Grid.Row="2"
-			VerticalAlignment="Bottom">
-			<Grid>
-				
-                                <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-				<Grid.RowDefinitions>
-					<RowDefinition Height="*"/>
-				</Grid.RowDefinitions>
-				
-                                <TextBlock
-                                        x:Name="labelVersion"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Bottom"
-                                        FontFamily="Verdana"
-                                        FontSize="12"
-                                        FontWeight="Bold"
-                                        Foreground="#747474"
-                                        Margin="10">Version</TextBlock>
-			</Grid>
-		</StackPanel>
-	</Grid>
+        </Grid>
 </Window>

@@ -13,10 +13,10 @@
 		WindowStartupLocation="CenterScreen"
 		Title="Loading Launcher" Height="400" Width="800">
 	<Grid>
-		<Image
-			Height="150"
-			Source="pack://application:,,,/Assets/logo.png"
-			Stretch="Uniform"
+                <Image
+                        Height="220"
+                        Source="pack://application:,,,/Assets/logo.png"
+                        Stretch="Uniform"
 			HorizontalAlignment="Center"
 			VerticalAlignment="Center"
 			Visibility="Visible"></Image>
