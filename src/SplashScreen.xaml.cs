@@ -4,70 +4,158 @@ using System.IO;
 using System.Net;
 using System.Windows.Threading;
 using System.Net.Http;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.IO.Compression;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using LauncherConfig;
+using Newtonsoft.Json;
 
 namespace CanaryLauncherUpdate
 {
-	public partial class SplashScreen : Window
-	{
-		static string launcerConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
-		// Load informations of launcher_config.json file
-		static ClientConfig clientConfig = ClientConfig.loadFromFile(launcerConfigUrl);
+  public partial class SplashScreen : Window
+  {
+    const string launcherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
+    static readonly HttpClient httpClient = new HttpClient();
 
-		static string clientExecutableName = clientConfig.clientExecutable;
-		static string urlClient = clientConfig.newClientUrl;
+    readonly DispatcherTimer timer = new DispatcherTimer();
+    ClientConfig clientConfig;
 
-		static readonly HttpClient httpClient = new HttpClient();
-		DispatcherTimer timer = new DispatcherTimer();
+    public SplashScreen()
+    {
+      InitializeComponent();
+      Loaded += SplashScreen_Loaded;
+    }
 
+    private async void SplashScreen_Loaded(object sender, RoutedEventArgs e)
+    {
+      await InitializeAsync();
+    }
 
-		public SplashScreen()
-		{
-			string newVersion = clientConfig.clientVersion;
-			if (newVersion == null)
-			{
-				this.Close();
-			}
+    public async Task InitializeAsync()
+    {
+      LoadingMessage.Visibility = Visibility.Visible;
+      LoadingProgress.Visibility = Visibility.Visible;
 
-			// Start the client if the versions are the same
-                        if (File.Exists(LauncherUtils.GetLauncherPath(clientConfig, true) + "/launcher_config.json")) {
-                                string actualVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
-                                if (newVersion == actualVersion && Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)) ) {
-                                        LauncherUtils.LaunchClient(Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), "bin", clientExecutableName), clientConfig.clientPriority);
-                                        this.Close();
-                                }
-                        }
+      ClientConfig config = await LoadConfigWithFallbackAsync();
+      if (config == null)
+      {
+        MessageBox.Show("Não foi possível carregar a configuração do launcher.", "Canary Launcher", MessageBoxButton.OK, MessageBoxImage.Error);
+        Close();
+        return;
+      }
 
-			InitializeComponent();
-			timer.Tick += new EventHandler(timer_SplashScreen);
-			timer.Interval = new TimeSpan(0, 0, 5);
-			timer.Start();
-		}
+      clientConfig = config;
+      LoadingMessage.Visibility = Visibility.Collapsed;
+      LoadingProgress.Visibility = Visibility.Collapsed;
 
-		public async void timer_SplashScreen(object sender, EventArgs e)
-		{
-			var requestClient = new HttpRequestMessage(HttpMethod.Post, urlClient);
-			var response = await httpClient.SendAsync(requestClient);
-			if (response.StatusCode == HttpStatusCode.NotFound)
-			{
-				this.Close();
-			}
+      string newVersion = clientConfig.clientVersion;
+      if (string.IsNullOrEmpty(newVersion))
+      {
+        Close();
+        return;
+      }
 
-                        if (!Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)))
-                        {
-                                Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
-                        }
-			MainWindow mainWindow = new MainWindow();
-			this.Close();
-			mainWindow.Show();
-			timer.Stop();
-		}
-	}
+      string baseConfigPath = LauncherUtils.GetLauncherPath(clientConfig, true) + "/launcher_config.json";
+      if (File.Exists(baseConfigPath))
+      {
+        string actualVersion = LauncherUtils.GetClientVersion(LauncherUtils.GetLauncherPath(clientConfig, true));
+        if (newVersion == actualVersion && Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)))
+        {
+          LauncherUtils.LaunchClient(Path.Combine(LauncherUtils.GetLauncherPath(clientConfig), "bin", clientConfig.clientExecutable), clientConfig.clientPriority);
+          Close();
+          return;
+        }
+      }
+
+      timer.Tick += timer_SplashScreen;
+      timer.Interval = TimeSpan.FromSeconds(5);
+      timer.Start();
+    }
+
+    async Task<ClientConfig> LoadConfigWithFallbackAsync()
+    {
+      try
+      {
+        return await ClientConfig.LoadFromUrlAsync(launcherConfigUrl);
+      }
+      catch (HttpRequestException)
+      {
+        return await TryLoadLocalConfigAsync();
+      }
+      catch (TaskCanceledException)
+      {
+        return await TryLoadLocalConfigAsync();
+      }
+      catch (JsonException)
+      {
+        return await TryLoadLocalConfigAsync();
+      }
+      catch (Exception)
+      {
+        return await TryLoadLocalConfigAsync();
+      }
+    }
+
+    async Task<ClientConfig> TryLoadLocalConfigAsync()
+    {
+      string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "launcher_config.json");
+      if (!File.Exists(localPath))
+      {
+        return null;
+      }
+      try
+      {
+        return await ClientConfig.LoadFromFileAsync(localPath);
+      }
+      catch (IOException)
+      {
+        return null;
+      }
+      catch (JsonException)
+      {
+        return null;
+      }
+      catch (Exception)
+      {
+        return null;
+      }
+    }
+
+    async void timer_SplashScreen(object sender, EventArgs e)
+    {
+      timer.Stop();
+      try
+      {
+        var requestClient = new HttpRequestMessage(HttpMethod.Post, clientConfig.newClientUrl);
+        var response = await httpClient.SendAsync(requestClient);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+          Close();
+          return;
+        }
+      }
+      catch (HttpRequestException)
+      {
+        Close();
+        return;
+      }
+      catch (TaskCanceledException)
+      {
+        Close();
+        return;
+      }
+      catch (Exception)
+      {
+        Close();
+        return;
+      }
+
+      if (!Directory.Exists(LauncherUtils.GetLauncherPath(clientConfig)))
+      {
+        Directory.CreateDirectory(LauncherUtils.GetLauncherPath(clientConfig));
+      }
+
+      MainWindow mainWindow = new MainWindow(clientConfig);
+      Close();
+      mainWindow.Show();
+    }
+  }
 }

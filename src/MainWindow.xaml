@@ -16,8 +16,8 @@
 		ResizeMode="NoResize"
 		WindowState="Normal"
 		WindowStartupLocation="CenterScreen"
-		Title="Tibia Launcher"
-		Loaded="TibiaLauncher_Load">
+                Title="Tibia Launcher"
+                Loaded="MainWindow_Loaded">
 	<Grid>
 
 		<Grid.ColumnDefinitions>
