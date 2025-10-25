@@ -94,6 +94,7 @@
     <Resource Include="assets\logo.png" />
     <Resource Include="assets\logo_company.png" />
     <Resource Include="assets\rh_lore.png" />
+    <Resource Include="icon.ico" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="launcher_config.json">
