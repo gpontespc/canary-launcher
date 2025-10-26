@@ -4,7 +4,7 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:local="clr-namespace:CanaryLauncherUpdate"
-		Icon="pack://application:,,,/Assets/launcher_ico.png"
+                Icon="pack://application:,,,/icon.ico"
 		mc:Ignorable="d"
 		Background="Transparent"
 		AllowsTransparency="True"
@@ -13,20 +13,31 @@
 		WindowStartupLocation="CenterScreen"
 		Title="Loading Launcher" Height="400" Width="800">
 	<Grid>
-		<Image
-			Height="150"
-			Source="pack://application:,,,/Assets/logo.png"
-			Stretch="Uniform"
+                <Image
+                        Height="280"
+                        Source="pack://application:,,,/Assets/logo.png"
+                        Stretch="Uniform"
 			HorizontalAlignment="Center"
 			VerticalAlignment="Center"
 			Visibility="Visible"></Image>
-		<TextBlock
-			HorizontalAlignment="Center"
-			VerticalAlignment="Center"
-			Margin="0, 180, 0, 0"
-			Foreground="White"
-			FontSize="16"
-			Text="Loading"
-			Visibility="Collapsed"/>
-	</Grid>
+                <StackPanel
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="0, 220, 0, 0"
+                        Orientation="Vertical">
+                        <TextBlock
+                                x:Name="LoadingMessage"
+                                Foreground="White"
+                                FontSize="16"
+                                Text="Carregando configurações..."
+                                Visibility="Collapsed"/>
+                        <ProgressBar
+                                x:Name="LoadingProgress"
+                                Width="200"
+                                Height="6"
+                                Margin="0, 8, 0, 0"
+                                IsIndeterminate="True"
+                                Visibility="Collapsed"/>
+                </StackPanel>
+        </Grid>
 </Window>
