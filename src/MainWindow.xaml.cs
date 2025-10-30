@@ -15,8 +15,6 @@ namespace CanaryLauncherUpdate
 {
   public partial class MainWindow : Window
   {
-    const string launcherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
-
     readonly DownloadManager downloadManager = new DownloadManager();
     readonly ClientVersionStore versionStore;
     readonly ClientUpdater clientUpdater;
@@ -44,7 +42,7 @@ namespace CanaryLauncherUpdate
     {
       try
       {
-        ClientConfig latestConfig = await ClientConfig.LoadFromUrlAsync(launcherConfigUrl).ConfigureAwait(true);
+        ClientConfig latestConfig = await LoadLatestConfigAsync().ConfigureAwait(true);
         if (latestConfig != null)
           clientConfig = latestConfig;
       }
@@ -135,7 +133,7 @@ namespace CanaryLauncherUpdate
         ClientUpdateResult result = await clientUpdater.ExecuteUpdateAsync(
           clientConfig,
           currentPlan,
-          launcherConfigUrl,
+          GetEffectiveLauncherConfigUrl(),
           downloadProgress,
           extractionProgress,
           statusProgress,
@@ -316,6 +314,35 @@ namespace CanaryLauncherUpdate
     {
       base.OnClosed(e);
       downloadManager.Dispose();
+    }
+
+    async Task<ClientConfig> LoadLatestConfigAsync()
+    {
+      string primaryUrl = GetEffectiveLauncherConfigUrl();
+      ClientConfig remoteConfig = await TryLoadRemoteConfigAsync(primaryUrl).ConfigureAwait(true);
+      if (remoteConfig == null && !string.Equals(primaryUrl, LauncherUtils.DefaultLauncherConfigUrl, StringComparison.OrdinalIgnoreCase))
+        remoteConfig = await TryLoadRemoteConfigAsync(LauncherUtils.DefaultLauncherConfigUrl).ConfigureAwait(true);
+      return remoteConfig;
+    }
+
+    async Task<ClientConfig> TryLoadRemoteConfigAsync(string url)
+    {
+      if (string.IsNullOrWhiteSpace(url))
+        return null;
+
+      try
+      {
+        return await ClientConfig.LoadFromUrlAsync(url).ConfigureAwait(true);
+      }
+      catch
+      {
+        return null;
+      }
+    }
+
+    string GetEffectiveLauncherConfigUrl()
+    {
+      return LauncherUtils.GetLauncherConfigUrl(clientConfig);
     }
   }
 }

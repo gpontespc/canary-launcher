@@ -12,7 +12,6 @@ namespace CanaryLauncherUpdate
 {
   public partial class SplashScreen : Window
   {
-    const string launcherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
     static readonly HttpClient httpClient = new HttpClient();
 
     readonly DispatcherTimer timer = new DispatcherTimer();
@@ -75,26 +74,14 @@ namespace CanaryLauncherUpdate
 
     async Task<ClientConfig> LoadConfigWithFallbackAsync()
     {
-      try
-      {
-        return await ClientConfig.LoadFromUrlAsync(launcherConfigUrl);
-      }
-      catch (HttpRequestException)
-      {
-        return await TryLoadLocalConfigAsync();
-      }
-      catch (TaskCanceledException)
-      {
-        return await TryLoadLocalConfigAsync();
-      }
-      catch (JsonException)
-      {
-        return await TryLoadLocalConfigAsync();
-      }
-      catch (Exception)
-      {
-        return await TryLoadLocalConfigAsync();
-      }
+      ClientConfig localConfig = await TryLoadLocalConfigAsync();
+
+      string primaryUrl = LauncherUtils.GetLauncherConfigUrl(localConfig);
+      ClientConfig remoteConfig = await TryLoadRemoteConfigAsync(primaryUrl);
+      if (remoteConfig == null && !string.Equals(primaryUrl, LauncherUtils.DefaultLauncherConfigUrl, StringComparison.OrdinalIgnoreCase))
+        remoteConfig = await TryLoadRemoteConfigAsync(LauncherUtils.DefaultLauncherConfigUrl);
+
+      return remoteConfig ?? localConfig;
     }
 
     async Task<ClientConfig> TryLoadLocalConfigAsync()
@@ -146,6 +133,33 @@ namespace CanaryLauncherUpdate
       }
 
       return null;
+    }
+
+    static async Task<ClientConfig> TryLoadRemoteConfigAsync(string url)
+    {
+      if (string.IsNullOrWhiteSpace(url))
+        return null;
+
+      try
+      {
+        return await ClientConfig.LoadFromUrlAsync(url);
+      }
+      catch (HttpRequestException)
+      {
+        return null;
+      }
+      catch (TaskCanceledException)
+      {
+        return null;
+      }
+      catch (JsonException)
+      {
+        return null;
+      }
+      catch (Exception)
+      {
+        return null;
+      }
     }
 
     static async Task<ClientConfig> TryLoadConfigFileAsync(string path)
