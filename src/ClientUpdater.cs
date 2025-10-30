@@ -32,7 +32,10 @@ namespace CanaryLauncherUpdate
       ClientVersionInfo versionInfo = versionStore.Load();
       string remoteVersionRaw = config.clientVersion;
       string remoteVersionNormalized = LauncherUtils.NormalizeVersion(remoteVersionRaw);
+      string localVersionRaw = versionInfo?.VersionRaw;
       string localVersionNormalized = versionInfo?.VersionNormalized ?? string.Empty;
+      LauncherUtils.VersionComponents remoteComponents = LauncherUtils.SplitVersionComponents(remoteVersionRaw);
+      LauncherUtils.VersionComponents localComponents = LauncherUtils.SplitVersionComponents(localVersionRaw);
       bool executableExists = !string.IsNullOrEmpty(executablePath) && File.Exists(executablePath);
 
       string remoteAssetsSignature = null;
@@ -50,11 +53,36 @@ namespace CanaryLauncherUpdate
       }
 
       UpdateMode mode = UpdateMode.None;
+      bool usedStructuredComparison = false;
       if (!executableExists || string.IsNullOrEmpty(localVersionNormalized))
       {
         mode = UpdateMode.Full;
       }
-      else
+      else if (remoteComponents.HasBaseVersion && localComponents.HasBaseVersion)
+      {
+        usedStructuredComparison = true;
+        if (!string.Equals(remoteComponents.BaseVersion, localComponents.BaseVersion, StringComparison.Ordinal))
+        {
+          mode = UpdateMode.Full;
+        }
+        else
+        {
+          bool timestampDiffers = remoteComponents.HasTimestamp
+            && localComponents.HasTimestamp
+            && !string.Equals(remoteComponents.Timestamp, localComponents.Timestamp, StringComparison.Ordinal);
+          if (timestampDiffers && hasAssetsUrl)
+          {
+            mode = UpdateMode.Assets;
+          }
+          else if (hasAssetsUrl && !string.IsNullOrEmpty(remoteAssetsSignature))
+          {
+            if (!string.Equals(versionInfo?.AssetsSignature, remoteAssetsSignature, StringComparison.Ordinal))
+              mode = UpdateMode.Assets;
+          }
+        }
+      }
+
+      if (mode == UpdateMode.None && !usedStructuredComparison)
       {
         int comparison = LauncherUtils.CompareNormalizedVersions(localVersionNormalized, remoteVersionNormalized);
         if (comparison < 0)
@@ -71,7 +99,7 @@ namespace CanaryLauncherUpdate
         }
       }
 
-      return new UpdatePlan(mode, remoteVersionRaw, remoteVersionNormalized, localVersionNormalized, versionInfo?.AssetsSignature, remoteAssetsSignature, executableExists);
+      return new UpdatePlan(mode, remoteVersionRaw, remoteVersionNormalized, localVersionRaw, localVersionNormalized, versionInfo?.AssetsSignature, remoteAssetsSignature, executableExists);
     }
 
     public async Task<ClientUpdateResult> ExecuteUpdateAsync(ClientConfig config,
@@ -85,7 +113,7 @@ namespace CanaryLauncherUpdate
       if (plan == null)
         throw new ArgumentNullException(nameof(plan));
       if (plan.Mode == UpdateMode.None)
-        return new ClientUpdateResult(config, plan.RemoteVersionNormalized, plan.RemoteAssetsSignature);
+        return new ClientUpdateResult(config, plan.LocalVersionRaw, plan.LocalVersionNormalized, plan.RemoteAssetsSignature);
 
       string clientPath = LauncherUtils.GetLauncherPath(config);
       Directory.CreateDirectory(clientPath);
@@ -141,19 +169,19 @@ namespace CanaryLauncherUpdate
       if (string.IsNullOrEmpty(versionRawToSave))
         versionRawToSave = plan.RemoteVersionRaw;
 
-      string versionToSave = LauncherUtils.NormalizeVersion(versionRawToSave);
-      if (string.IsNullOrEmpty(versionToSave))
-        versionToSave = plan.RemoteVersionNormalized;
+      string versionToSaveNormalized = LauncherUtils.NormalizeVersion(versionRawToSave);
+      if (string.IsNullOrEmpty(versionToSaveNormalized))
+        versionToSaveNormalized = plan.RemoteVersionNormalized;
       string assetsSignature = plan.RemoteAssetsSignature;
       if (string.IsNullOrEmpty(assetsSignature) && !string.IsNullOrEmpty(config.assetsUrl))
       {
         assetsSignature = await downloadManager.FetchRemoteSignatureAsync(new Uri(config.assetsUrl), cancellationToken).ConfigureAwait(false);
       }
 
-      if (!string.IsNullOrEmpty(versionToSave))
-        versionStore.Save(versionRawToSave, versionToSave, assetsSignature);
+      if (!string.IsNullOrEmpty(versionToSaveNormalized))
+        versionStore.Save(versionRawToSave, versionToSaveNormalized, assetsSignature);
 
-      return new ClientUpdateResult(updatedConfig ?? config, versionToSave, assetsSignature);
+      return new ClientUpdateResult(updatedConfig ?? config, versionRawToSave, versionToSaveNormalized, assetsSignature);
     }
 
     void ExtractZip(ClientConfig config, string zipPath, IProgress<int> progress)
