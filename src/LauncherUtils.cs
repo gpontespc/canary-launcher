@@ -11,6 +11,23 @@ namespace CanaryLauncherUpdate
 {
     internal static class LauncherUtils
     {
+        internal readonly struct VersionComponents
+        {
+            public VersionComponents(string baseVersion, string timestamp)
+            {
+                BaseVersion = baseVersion ?? string.Empty;
+                Timestamp = timestamp ?? string.Empty;
+            }
+
+            public string BaseVersion { get; }
+
+            public string Timestamp { get; }
+
+            public bool HasBaseVersion => !string.IsNullOrEmpty(BaseVersion);
+
+            public bool HasTimestamp => !string.IsNullOrEmpty(Timestamp);
+        }
+
         public const string DefaultLauncherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
         public const string DefaultLauncherConfigFallbackUrl = "https://axtbvbltppuw.objectstorage.sa-vinhedo-1.oci.customer-oci.com/n/axtbvbltppuw/b/bucket-client/o/launcher_config.json";
 
@@ -80,6 +97,35 @@ namespace CanaryLauncherUpdate
                     builder.Append(ch);
             }
             return builder.Length > 0 ? builder.ToString() : string.Empty;
+        }
+
+        public static VersionComponents SplitVersionComponents(string version)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+                return new VersionComponents(string.Empty, string.Empty);
+
+            string[] parts = version
+                .Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+            string major = parts.Length > 0 ? parts[0].Trim() : string.Empty;
+            string minor = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+            string timestamp = parts.Length > 2
+                ? string.Join(string.Empty, parts.Skip(2).Select(p => p.Trim()))
+                : string.Empty;
+
+            string baseVersion = string.Empty;
+            if (!string.IsNullOrEmpty(major))
+            {
+                baseVersion = !string.IsNullOrEmpty(minor)
+                    ? string.Concat(major, "/", minor)
+                    : major;
+            }
+            else if (!string.IsNullOrEmpty(minor))
+            {
+                baseVersion = minor;
+            }
+
+            return new VersionComponents(baseVersion, timestamp);
         }
 
         public static int CompareNormalizedVersions(string left, string right)
