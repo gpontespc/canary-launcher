@@ -23,7 +23,19 @@ namespace CanaryLauncherUpdate
     string clientExecutableName;
     UpdatePlan currentPlan;
     bool updateInProgress;
-    string currentStatusMessage = string.Empty;
+
+    enum ProgressStage
+    {
+      None,
+      Download,
+      Extract,
+      Status,
+    }
+
+    ProgressStage progressStage = ProgressStage.None;
+    int downloadPercent;
+    int extractPercent;
+    string statusMessage = string.Empty;
 
     public MainWindow(ClientConfig config)
     {
@@ -56,8 +68,9 @@ namespace CanaryLauncherUpdate
 
       progressbarDownload.Visibility = Visibility.Collapsed;
       progressbarDownload.IsIndeterminate = false;
-      labelDownloadPercent.Visibility = Visibility.Collapsed;
       labelClientVersion.Visibility = Visibility.Visible;
+      progressOverlay.Visibility = Visibility.Collapsed;
+      progressStage = ProgressStage.None;
 
       currentPlan = await clientUpdater.DetermineUpdatePlanAsync(clientConfig, CancellationToken.None).ConfigureAwait(true);
       ApplyUpdatePlan();
@@ -112,21 +125,20 @@ namespace CanaryLauncherUpdate
     {
       updateInProgress = true;
       buttonPlay.IsEnabled = false;
+      progressOverlay.Visibility = Visibility.Visible;
       progressbarDownload.Visibility = Visibility.Visible;
       progressbarDownload.IsIndeterminate = false;
       progressbarDownload.Value = 0;
-      labelDownloadPercent.Visibility = Visibility.Visible;
-      labelClientVersion.Visibility = Visibility.Collapsed;
+      downloadPercent = 0;
+      extractPercent = 0;
+      progressStage = ProgressStage.Download;
+      statusMessage = string.Empty;
+      RefreshProgressLabel();
       buttonPlay.Visibility = Visibility.Collapsed;
 
       var downloadProgress = new Progress<DownloadProgressInfo>(info => UpdateDownloadUi(info));
       var extractionProgress = new Progress<int>(value => UpdateExtractionUi(value));
       var statusProgress = new Progress<string>(message => UpdateStatus(message));
-
-      currentStatusMessage = currentPlan?.Mode == UpdateMode.Full
-        ? "Atualizando client completo..."
-        : "Baixando assets...";
-      labelDownloadPercent.Content = currentStatusMessage;
 
       try
       {
@@ -158,9 +170,11 @@ namespace CanaryLauncherUpdate
         updateInProgress = false;
         buttonPlay.IsEnabled = true;
         buttonPlay.Visibility = Visibility.Visible;
+        progressOverlay.Visibility = Visibility.Collapsed;
         progressbarDownload.Visibility = Visibility.Collapsed;
         progressbarDownload.IsIndeterminate = false;
-        labelDownloadPercent.Visibility = Visibility.Collapsed;
+        progressStage = ProgressStage.None;
+        statusMessage = string.Empty;
         labelClientVersion.Visibility = Visibility.Visible;
       }
     }
@@ -179,29 +193,51 @@ namespace CanaryLauncherUpdate
         if (percent > 100)
           percent = 100;
         progressbarDownload.Value = percent;
+        downloadPercent = (int)Math.Round(percent, MidpointRounding.AwayFromZero);
       }
       else
       {
         progressbarDownload.IsIndeterminate = true;
       }
 
-      if (info.TotalBytes.HasValue)
-        labelDownloadPercent.Content = $"{currentStatusMessage} {SizeSuffix(info.BytesReceived)} / {SizeSuffix(info.TotalBytes.Value)}";
-      else
-        labelDownloadPercent.Content = $"{currentStatusMessage} {SizeSuffix(info.BytesReceived)}";
+      progressStage = ProgressStage.Download;
+      RefreshProgressLabel();
     }
 
     void UpdateExtractionUi(int value)
     {
       progressbarDownload.IsIndeterminate = false;
-      progressbarDownload.Value = value;
-      labelDownloadPercent.Content = $"Extraindo {value}%";
+      int clampedValue = Math.Max(0, Math.Min(100, value));
+      progressbarDownload.Value = clampedValue;
+      extractPercent = clampedValue;
+      progressStage = ProgressStage.Extract;
+      RefreshProgressLabel();
     }
 
     void UpdateStatus(string message)
     {
-      currentStatusMessage = message;
-      labelDownloadPercent.Content = message;
+      statusMessage = message ?? string.Empty;
+      if (progressStage != ProgressStage.Download && progressStage != ProgressStage.Extract)
+      {
+        progressStage = ProgressStage.Status;
+        RefreshProgressLabel();
+      }
+    }
+
+    void RefreshProgressLabel()
+    {
+      switch (progressStage)
+      {
+        case ProgressStage.Download:
+          labelClientVersion.Content = $"Download {downloadPercent}%";
+          break;
+        case ProgressStage.Extract:
+          labelClientVersion.Content = $"Extract {extractPercent}%";
+          break;
+        case ProgressStage.Status:
+          labelClientVersion.Content = statusMessage;
+          break;
+      }
     }
 
     void LaunchClient()
@@ -247,29 +283,6 @@ namespace CanaryLauncherUpdate
       string onlineNumbersPath = Path.Combine(clientPath, "cache", "onlinenumbers.json");
       if (File.Exists(onlineNumbersPath))
         File.SetAttributes(onlineNumbersPath, FileAttributes.ReadOnly);
-    }
-
-    static readonly string[] SizeSuffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
-
-    static string SizeSuffix(long value, int decimalPlaces = 1)
-    {
-      if (decimalPlaces < 0)
-        throw new ArgumentOutOfRangeException(nameof(decimalPlaces));
-      if (value < 0)
-        return "-" + SizeSuffix(-value, decimalPlaces);
-      if (value == 0)
-        return string.Format("{0:n" + decimalPlaces + "} bytes", 0);
-
-      int mag = (int)Math.Log(value, 1024);
-      decimal adjustedSize = (decimal)value / (1L << (mag * 10));
-
-      if (Math.Round(adjustedSize, decimalPlaces) >= 1000)
-      {
-        mag += 1;
-        adjustedSize /= 1024;
-      }
-
-      return string.Format("{0:n" + decimalPlaces + "} {1}", adjustedSize, SizeSuffixes[mag]);
     }
 
     void buttonPlay_MouseEnter(object sender, MouseEventArgs e)
