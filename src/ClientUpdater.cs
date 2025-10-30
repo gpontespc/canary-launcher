@@ -103,13 +103,25 @@ namespace CanaryLauncherUpdate
       statusProgress?.Report("Extraindo arquivos...");
 
       bool shouldReplaceFolders = config.replaceFolders && config.replaceFolderName != null;
-      if ((plan.Mode == UpdateMode.Full || plan.Mode == UpdateMode.Assets) && shouldReplaceFolders)
+      HashSet<string> foldersInArchive = null;
+      if (plan.Mode == UpdateMode.Assets && shouldReplaceFolders)
+        foldersInArchive = GetTopLevelFolders(destinationPath);
+
+      if (shouldReplaceFolders)
       {
         foreach (ReplaceFolderName folderName in config.replaceFolderName)
         {
-          if (folderName == null || string.IsNullOrWhiteSpace(folderName.name))
+          if (folderName == null)
             continue;
-          string folderPath = Path.Combine(clientPath, folderName.name);
+
+          string folder = folderName.name;
+          if (string.IsNullOrWhiteSpace(folder))
+            continue;
+
+          if (plan.Mode == UpdateMode.Assets && foldersInArchive != null && !foldersInArchive.Contains(folder))
+            continue;
+
+          string folderPath = Path.Combine(clientPath, folder);
           if (Directory.Exists(folderPath))
             Directory.Delete(folderPath, true);
         }
@@ -198,6 +210,25 @@ namespace CanaryLauncherUpdate
 
       if (lastProgress < 100)
         progress?.Report(100);
+    }
+
+    static HashSet<string> GetTopLevelFolders(string zipPath)
+    {
+      var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+      using ZipArchive archive = ZipFile.OpenRead(zipPath);
+      foreach (ZipArchiveEntry entry in archive.Entries)
+      {
+        string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+          continue;
+
+        if (parts.Length == 1 && !string.IsNullOrEmpty(entry.Name))
+          continue;
+
+        folders.Add(parts[0]);
+      }
+
+      return folders;
     }
 
     async Task<ClientConfig> SyncLauncherConfigAsync(ClientConfig config, string launcherConfigUrl, CancellationToken cancellationToken)
