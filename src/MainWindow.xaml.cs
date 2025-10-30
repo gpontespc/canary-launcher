@@ -349,6 +349,22 @@ namespace CanaryLauncherUpdate
       }
       catch
       {
+        ClientConfig fallbackConfig = await TryLoadFallbackRemoteConfigAsync(url).ConfigureAwait(true);
+        return fallbackConfig;
+      }
+    }
+
+    async Task<ClientConfig> TryLoadFallbackRemoteConfigAsync(string failedUrl)
+    {
+      if (!LauncherUtils.TryGetFallbackLauncherConfigUrl(failedUrl, out string fallbackUrl))
+        return null;
+
+      try
+      {
+        return await ClientConfig.LoadFromUrlAsync(fallbackUrl).ConfigureAwait(true);
+      }
+      catch
+      {
         return null;
       }
     }
