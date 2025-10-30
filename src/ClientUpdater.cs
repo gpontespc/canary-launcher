@@ -102,7 +102,8 @@ namespace CanaryLauncherUpdate
 
       statusProgress?.Report("Extraindo arquivos...");
 
-      if (plan.Mode == UpdateMode.Full && config.replaceFolders && config.replaceFolderName != null)
+      bool shouldReplaceFolders = config.replaceFolders && config.replaceFolderName != null;
+      if ((plan.Mode == UpdateMode.Full || plan.Mode == UpdateMode.Assets) && shouldReplaceFolders)
       {
         foreach (ReplaceFolderName folderName in config.replaceFolderName)
         {
