@@ -190,27 +190,9 @@ namespace CanaryLauncherUpdate
     async void timer_SplashScreen(object sender, EventArgs e)
     {
       timer.Stop();
-      try
-      {
-        var requestClient = new HttpRequestMessage(HttpMethod.Post, clientConfig.newClientUrl);
-        var response = await httpClient.SendAsync(requestClient);
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-          Close();
-          return;
-        }
-      }
-      catch (HttpRequestException)
-      {
-        Close();
-        return;
-      }
-      catch (TaskCanceledException)
-      {
-        Close();
-        return;
-      }
-      catch (Exception)
+
+      bool endpointAvailable = await EnsureClientPackageAvailableAsync().ConfigureAwait(true);
+      if (!endpointAvailable)
       {
         Close();
         return;
@@ -224,6 +206,44 @@ namespace CanaryLauncherUpdate
       MainWindow mainWindow = new MainWindow(clientConfig);
       Close();
       mainWindow.Show();
+    }
+
+    async Task<bool> EnsureClientPackageAvailableAsync()
+    {
+      string url = clientConfig?.newClientUrl;
+      if (string.IsNullOrWhiteSpace(url))
+        return true;
+
+      if (await ProbeEndpointAsync(HttpMethod.Head, url).ConfigureAwait(true))
+        return true;
+
+      return await ProbeEndpointAsync(HttpMethod.Get, url).ConfigureAwait(true);
+    }
+
+    async Task<bool> ProbeEndpointAsync(HttpMethod method, string url)
+    {
+      try
+      {
+        using HttpRequestMessage request = new HttpRequestMessage(method, url);
+        using HttpResponseMessage response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(true);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+          return false;
+
+        return true;
+      }
+      catch (HttpRequestException)
+      {
+        return method == HttpMethod.Get;
+      }
+      catch (TaskCanceledException)
+      {
+        return true;
+      }
+      catch (Exception)
+      {
+        return method == HttpMethod.Get;
+      }
     }
   }
 }
