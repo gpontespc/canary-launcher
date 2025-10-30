@@ -15,6 +15,7 @@
   ],
   "clientFolder": "Tibia",
   "newClientUrl": "https://balrogot.com.br/download-client/balrogot-1511.zip",
+  "assetsUrl": "https://balrogot.com.br/download-client/assets.zip",
   "clientExecutable": "client.exe",
   "clientPriority": "High"
 }

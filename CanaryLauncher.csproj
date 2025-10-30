@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Xml.Linq" />
@@ -55,9 +56,16 @@
   <ItemGroup>
     <Compile Include="src\App.xaml.cs" />
     <Compile Include="src\AssemblyInfo.cs" />
+    <Compile Include="src\ClientUpdateResult.cs" />
+    <Compile Include="src\ClientUpdater.cs" />
     <Compile Include="src\ClientConfig.cs" />
+    <Compile Include="src\ClientVersionStore.cs" />
+    <Compile Include="src\DownloadManager.cs" />
+    <Compile Include="src\DownloadProgressInfo.cs" />
     <Compile Include="src\LauncherUtils.cs" />
     <Compile Include="src\MainWindow.xaml.cs" />
+    <Compile Include="src\UpdateMode.cs" />
+    <Compile Include="src\UpdatePlan.cs" />
     <Compile Include="src\SplashScreen.xaml.cs" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.Buffers" Version="4.5.1" />
