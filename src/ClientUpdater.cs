@@ -30,7 +30,8 @@ namespace CanaryLauncherUpdate
         : Path.Combine(clientPath, "bin", config.clientExecutable);
 
       ClientVersionInfo versionInfo = versionStore.Load();
-      string remoteVersionNormalized = LauncherUtils.NormalizeVersion(config.clientVersion);
+      string remoteVersionRaw = config.clientVersion;
+      string remoteVersionNormalized = LauncherUtils.NormalizeVersion(remoteVersionRaw);
       string localVersionNormalized = versionInfo?.VersionNormalized ?? string.Empty;
       bool executableExists = !string.IsNullOrEmpty(executablePath) && File.Exists(executablePath);
 
@@ -70,7 +71,7 @@ namespace CanaryLauncherUpdate
         }
       }
 
-      return new UpdatePlan(mode, remoteVersionNormalized, localVersionNormalized, versionInfo?.AssetsSignature, remoteAssetsSignature, executableExists);
+      return new UpdatePlan(mode, remoteVersionRaw, remoteVersionNormalized, localVersionNormalized, versionInfo?.AssetsSignature, remoteAssetsSignature, executableExists);
     }
 
     public async Task<ClientUpdateResult> ExecuteUpdateAsync(ClientConfig config,
@@ -132,7 +133,17 @@ namespace CanaryLauncherUpdate
         File.Delete(destinationPath);
 
       ClientConfig updatedConfig = await SyncLauncherConfigAsync(config, launcherConfigUrl, cancellationToken).ConfigureAwait(false);
-      string versionToSave = plan.RemoteVersionNormalized;
+      string versionRawToSave = null;
+      if (updatedConfig != null)
+        versionRawToSave = updatedConfig.clientVersion;
+      if (string.IsNullOrEmpty(versionRawToSave))
+        versionRawToSave = config.clientVersion;
+      if (string.IsNullOrEmpty(versionRawToSave))
+        versionRawToSave = plan.RemoteVersionRaw;
+
+      string versionToSave = LauncherUtils.NormalizeVersion(versionRawToSave);
+      if (string.IsNullOrEmpty(versionToSave))
+        versionToSave = plan.RemoteVersionNormalized;
       string assetsSignature = plan.RemoteAssetsSignature;
       if (string.IsNullOrEmpty(assetsSignature) && !string.IsNullOrEmpty(config.assetsUrl))
       {
@@ -140,7 +151,7 @@ namespace CanaryLauncherUpdate
       }
 
       if (!string.IsNullOrEmpty(versionToSave))
-        versionStore.Save(versionToSave, assetsSignature);
+        versionStore.Save(versionRawToSave, versionToSave, assetsSignature);
 
       return new ClientUpdateResult(updatedConfig ?? config, versionToSave, assetsSignature);
     }

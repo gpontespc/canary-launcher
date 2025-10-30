@@ -3,6 +3,7 @@ namespace CanaryLauncherUpdate
   internal sealed class UpdatePlan
   {
     public UpdatePlan(UpdateMode mode,
+      string remoteVersionRaw,
       string remoteVersionNormalized,
       string localVersionNormalized,
       string localAssetsSignature,
@@ -10,6 +11,7 @@ namespace CanaryLauncherUpdate
       bool executableExists)
     {
       Mode = mode;
+      RemoteVersionRaw = remoteVersionRaw;
       RemoteVersionNormalized = remoteVersionNormalized;
       LocalVersionNormalized = localVersionNormalized;
       LocalAssetsSignature = localAssetsSignature;
@@ -18,6 +20,8 @@ namespace CanaryLauncherUpdate
     }
 
     public UpdateMode Mode { get; }
+
+    public string RemoteVersionRaw { get; }
 
     public string RemoteVersionNormalized { get; }
 
