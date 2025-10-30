@@ -12,7 +12,6 @@ namespace CanaryLauncherUpdate
 {
   public partial class SplashScreen : Window
   {
-    const string launcherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
     static readonly HttpClient httpClient = new HttpClient();
 
     readonly DispatcherTimer timer = new DispatcherTimer();
@@ -75,26 +74,14 @@ namespace CanaryLauncherUpdate
 
     async Task<ClientConfig> LoadConfigWithFallbackAsync()
     {
-      try
-      {
-        return await ClientConfig.LoadFromUrlAsync(launcherConfigUrl);
-      }
-      catch (HttpRequestException)
-      {
-        return await TryLoadLocalConfigAsync();
-      }
-      catch (TaskCanceledException)
-      {
-        return await TryLoadLocalConfigAsync();
-      }
-      catch (JsonException)
-      {
-        return await TryLoadLocalConfigAsync();
-      }
-      catch (Exception)
-      {
-        return await TryLoadLocalConfigAsync();
-      }
+      ClientConfig localConfig = await TryLoadLocalConfigAsync();
+
+      string primaryUrl = LauncherUtils.GetLauncherConfigUrl(localConfig);
+      ClientConfig remoteConfig = await TryLoadRemoteConfigAsync(primaryUrl);
+      if (remoteConfig == null && !string.Equals(primaryUrl, LauncherUtils.DefaultLauncherConfigUrl, StringComparison.OrdinalIgnoreCase))
+        remoteConfig = await TryLoadRemoteConfigAsync(LauncherUtils.DefaultLauncherConfigUrl);
+
+      return remoteConfig ?? localConfig;
     }
 
     async Task<ClientConfig> TryLoadLocalConfigAsync()
@@ -148,6 +135,33 @@ namespace CanaryLauncherUpdate
       return null;
     }
 
+    static async Task<ClientConfig> TryLoadRemoteConfigAsync(string url)
+    {
+      if (string.IsNullOrWhiteSpace(url))
+        return null;
+
+      try
+      {
+        return await ClientConfig.LoadFromUrlAsync(url);
+      }
+      catch (HttpRequestException)
+      {
+        return null;
+      }
+      catch (TaskCanceledException)
+      {
+        return null;
+      }
+      catch (JsonException)
+      {
+        return null;
+      }
+      catch (Exception)
+      {
+        return null;
+      }
+    }
+
     static async Task<ClientConfig> TryLoadConfigFileAsync(string path)
     {
       if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -176,27 +190,9 @@ namespace CanaryLauncherUpdate
     async void timer_SplashScreen(object sender, EventArgs e)
     {
       timer.Stop();
-      try
-      {
-        var requestClient = new HttpRequestMessage(HttpMethod.Post, clientConfig.newClientUrl);
-        var response = await httpClient.SendAsync(requestClient);
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-          Close();
-          return;
-        }
-      }
-      catch (HttpRequestException)
-      {
-        Close();
-        return;
-      }
-      catch (TaskCanceledException)
-      {
-        Close();
-        return;
-      }
-      catch (Exception)
+
+      bool endpointAvailable = await EnsureClientPackageAvailableAsync().ConfigureAwait(true);
+      if (!endpointAvailable)
       {
         Close();
         return;
@@ -210,6 +206,44 @@ namespace CanaryLauncherUpdate
       MainWindow mainWindow = new MainWindow(clientConfig);
       Close();
       mainWindow.Show();
+    }
+
+    async Task<bool> EnsureClientPackageAvailableAsync()
+    {
+      string url = clientConfig?.newClientUrl;
+      if (string.IsNullOrWhiteSpace(url))
+        return true;
+
+      if (await ProbeEndpointAsync(HttpMethod.Head, url).ConfigureAwait(true))
+        return true;
+
+      return await ProbeEndpointAsync(HttpMethod.Get, url).ConfigureAwait(true);
+    }
+
+    async Task<bool> ProbeEndpointAsync(HttpMethod method, string url)
+    {
+      try
+      {
+        using HttpRequestMessage request = new HttpRequestMessage(method, url);
+        using HttpResponseMessage response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(true);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+          return false;
+
+        return true;
+      }
+      catch (HttpRequestException)
+      {
+        return method == HttpMethod.Get;
+      }
+      catch (TaskCanceledException)
+      {
+        return true;
+      }
+      catch (Exception)
+      {
+        return method == HttpMethod.Get;
+      }
     }
   }
 }

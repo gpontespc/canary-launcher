@@ -11,6 +11,15 @@ namespace CanaryLauncherUpdate
 {
     internal static class LauncherUtils
     {
+        public const string DefaultLauncherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
+
+        public static string GetLauncherConfigUrl(ClientConfig config)
+        {
+            if (!string.IsNullOrWhiteSpace(config?.newConfigUrl))
+                return config.newConfigUrl;
+            return DefaultLauncherConfigUrl;
+        }
+
         public static string GetLauncherPath(ClientConfig config, bool onlyBaseDirectory = false)
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
