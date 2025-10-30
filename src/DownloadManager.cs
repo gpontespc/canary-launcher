@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -151,10 +152,34 @@ namespace CanaryLauncherUpdate
       string etag = response.Headers.ETag?.Tag;
       if (!string.IsNullOrEmpty(etag))
         return etag;
-      string lastModified = response.Content.Headers.LastModified?.ToString() ?? response.Headers.LastModified?.ToString();
-      long? contentLength = response.Content.Headers.ContentLength ?? response.Headers.ContentLength;
+      string lastModified = GetHeaderValue(response.Content?.Headers, "Last-Modified") ?? GetHeaderValue(response.Headers, "Last-Modified");
+      long? contentLength = response.Content?.Headers?.ContentLength ?? TryGetContentLength(response.Headers);
       if (!string.IsNullOrEmpty(lastModified) || contentLength.HasValue)
         return $"{contentLength?.ToString() ?? "null"}:{lastModified}";
+      return null;
+    }
+
+    static string GetHeaderValue(HttpHeaders headers, string name)
+    {
+      if (headers == null)
+        return null;
+      if (!headers.TryGetValues(name, out IEnumerable<string> values))
+        return null;
+      foreach (string value in values)
+      {
+        if (!string.IsNullOrEmpty(value))
+          return value;
+      }
+      return null;
+    }
+
+    static long? TryGetContentLength(HttpHeaders headers)
+    {
+      if (headers == null)
+        return null;
+      string value = GetHeaderValue(headers, "Content-Length");
+      if (long.TryParse(value, out long parsed))
+        return parsed;
       return null;
     }
   }
