@@ -88,94 +88,107 @@
 			<StackPanel.Background>
 				<ImageBrush ImageSource="{StaticResource BGButtonUpdateKey}" Stretch="Fill"></ImageBrush>
 			</StackPanel.Background>
-			<StackPanel>
-				<Button
-					x:Name="buttonPlay"
-					Width="100"
-					Height="42"
-					Margin="0, 8, 0, 0"	
-					BorderThickness="0"
-					Cursor="Hand"
-					BorderBrush="{x:Null}"
-					Visibility="Visible"
-					Click="buttonPlay_Click"
-					MouseLeave="buttonPlay_MouseLeave"
-					MouseEnter="buttonPlay_MouseEnter">
+                        <StackPanel>
+                          <Grid
+                            Width="100"
+                            Height="42"
+                            Margin="0, 8, 0, 0">
+                            <Button
+                              x:Name="buttonPlay"
+                              Width="100"
+                              Height="42"
+                              BorderThickness="0"
+                              Cursor="Hand"
+                              BorderBrush="{x:Null}"
+                              Visibility="Visible"
+                              Click="buttonPlay_Click"
+                              MouseLeave="buttonPlay_MouseLeave"
+                              MouseEnter="buttonPlay_MouseEnter">
 
-					<Button.Background>
-						<ImageBrush ImageSource="{StaticResource ButtonPlayKey}"></ImageBrush>
-					</Button.Background>
+                              <Button.Background>
+                                <ImageBrush ImageSource="{StaticResource ButtonPlayKey}"></ImageBrush>
+                              </Button.Background>
 
-					<Button.ToolTip>
-						<ToolTip>
-							<TextBlock
-								x:Name="buttonPlay_tooltip"
-								Foreground="#404348"
-								FontWeight="Bold"
-								Text="Play Game">
-							</TextBlock>
-						</ToolTip>
-					</Button.ToolTip>
+                              <Button.ToolTip>
+                                <ToolTip>
+                                  <TextBlock
+                                    x:Name="buttonPlay_tooltip"
+                                    Foreground="#404348"
+                                    FontWeight="Bold"
+                                    Text="Play Game">
+                                  </TextBlock>
+                                </ToolTip>
+                              </Button.ToolTip>
 
-					<Button.Content>
-						<Image
-							x:Name="buttonPlayIcon"
-							Source="{StaticResource IconPlayKey}"
-							Stretch="Uniform"
-							Height="32"></Image>
-					</Button.Content>
-					<Button.Style>
-						<Style TargetType="{x:Type Button}">
-							<Setter Property="Template">
-								<Setter.Value>
-									<ControlTemplate TargetType="{x:Type Button}">
-										<Border Background="{TemplateBinding Background}">
-											<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-										</Border>
-									</ControlTemplate>
-								</Setter.Value>
-							</Setter>
-							<Style.Triggers>
-								<Trigger Property="IsMouseOver" Value="True"></Trigger>
-							</Style.Triggers>
-						</Style>
-					</Button.Style>
-				</Button>
-				<ProgressBar
-					x:Name="progressbarDownload"
-					Width="100"
-					Height="40"
-					Margin="0, 8, 0, 0"
-					Value="100"
-					Visibility="Collapsed">
-					<ProgressBar.Foreground>
-						<LinearGradientBrush
-								StartPoint="0.5, 1.5"
-								EndPoint="0.5, 0">
-							<GradientStop Color="#dd9323" Offset="0.4" />
-							<GradientStop Color="#6b4711" Offset="0.8" />
-						</LinearGradientBrush>
-					</ProgressBar.Foreground>
-				</ProgressBar>
-				<Label
-					x:Name="labelClientVersion"
-					FontFamily="Verdana"
-					FontSize="13"
-					FontWeight="Bold"
-					Foreground="#bfbfbf"
-					HorizontalAlignment="Center"
-					Margin="0, 2, 0, 0"
-					Visibility="Visible">Client Version</Label>
-				<Label
-					x:Name="labelDownloadPercent"
-					FontFamily="Verdana"
-					FontSize="10"
-					FontWeight="Bold"
-					Foreground="#bfbfbf"
-					HorizontalAlignment="Center"
-					Margin="0, 2, 0, 0"
-					Visibility="Collapsed">Download</Label>
-			</StackPanel>
+                              <Button.Content>
+                                <Image
+                                  x:Name="buttonPlayIcon"
+                                  Source="{StaticResource IconPlayKey}"
+                                  Stretch="Uniform"
+                                  Height="32"></Image>
+                              </Button.Content>
+                              <Button.Style>
+                                <Style TargetType="{x:Type Button}">
+                                  <Setter Property="Template">
+                                    <Setter.Value>
+                                      <ControlTemplate TargetType="{x:Type Button}">
+                                        <Border Background="{TemplateBinding Background}">
+                                          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                      </ControlTemplate>
+                                    </Setter.Value>
+                                  </Setter>
+                                  <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True"></Trigger>
+                                  </Style.Triggers>
+                                </Style>
+                              </Button.Style>
+                            </Button>
+                            <Grid
+                              x:Name="progressOverlay"
+                              Visibility="Collapsed">
+                              <ProgressBar
+                                x:Name="progressbarDownload"
+                                Width="100"
+                                Height="42"
+                                Value="100"
+                                Visibility="Collapsed">
+                                <ProgressBar.Foreground>
+                                  <LinearGradientBrush
+                                    StartPoint="0.5, 1.5"
+                                    EndPoint="0.5, 0">
+                                    <GradientStop Color="#dd9323" Offset="0.4" />
+                                    <GradientStop Color="#6b4711" Offset="0.8" />
+                                  </LinearGradientBrush>
+                                </ProgressBar.Foreground>
+                              </ProgressBar>
+                              <Label
+                                x:Name="labelDownloadPercent"
+                                FontFamily="Verdana"
+                                FontSize="11"
+                                FontWeight="Bold"
+                                Foreground="#ffffff"
+                                Background="{x:Null}"
+                                BorderBrush="{x:Null}"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Visibility="Collapsed"
+                                Padding="0"
+                                Margin="0">Download</Label>
+                            </Grid>
+                          </Grid>
+                          <Label
+                            x:Name="labelClientVersion"
+                            FontFamily="Verdana"
+                            FontSize="13"
+                            FontWeight="Bold"
+                            Foreground="#bfbfbf"
+                            HorizontalAlignment="Center"
+                            Margin="0, 2, 0, 0"
+                            Visibility="Visible">Client Version</Label>
+                        </StackPanel>
 		</StackPanel>
 		<StackPanel
 			Grid.Row="2"

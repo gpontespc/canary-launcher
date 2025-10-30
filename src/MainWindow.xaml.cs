@@ -58,6 +58,7 @@ namespace CanaryLauncherUpdate
       progressbarDownload.IsIndeterminate = false;
       labelDownloadPercent.Visibility = Visibility.Collapsed;
       labelClientVersion.Visibility = Visibility.Visible;
+      progressOverlay.Visibility = Visibility.Collapsed;
 
       currentPlan = await clientUpdater.DetermineUpdatePlanAsync(clientConfig, CancellationToken.None).ConfigureAwait(true);
       ApplyUpdatePlan();
@@ -112,6 +113,7 @@ namespace CanaryLauncherUpdate
     {
       updateInProgress = true;
       buttonPlay.IsEnabled = false;
+      progressOverlay.Visibility = Visibility.Visible;
       progressbarDownload.Visibility = Visibility.Visible;
       progressbarDownload.IsIndeterminate = false;
       progressbarDownload.Value = 0;
@@ -158,6 +160,7 @@ namespace CanaryLauncherUpdate
         updateInProgress = false;
         buttonPlay.IsEnabled = true;
         buttonPlay.Visibility = Visibility.Visible;
+        progressOverlay.Visibility = Visibility.Collapsed;
         progressbarDownload.Visibility = Visibility.Collapsed;
         progressbarDownload.IsIndeterminate = false;
         labelDownloadPercent.Visibility = Visibility.Collapsed;
