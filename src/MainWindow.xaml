@@ -162,21 +162,6 @@
                                   </LinearGradientBrush>
                                 </ProgressBar.Foreground>
                               </ProgressBar>
-                              <Label
-                                x:Name="labelDownloadPercent"
-                                FontFamily="Verdana"
-                                FontSize="11"
-                                FontWeight="Bold"
-                                Foreground="#ffffff"
-                                Background="{x:Null}"
-                                BorderBrush="{x:Null}"
-                                HorizontalContentAlignment="Center"
-                                VerticalContentAlignment="Center"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch"
-                                Visibility="Collapsed"
-                                Padding="0"
-                                Margin="0">Download</Label>
                             </Grid>
                           </Grid>
                           <Label
