@@ -189,6 +189,13 @@ namespace CanaryLauncherUpdate
           continue;
         }
 
+        if (File.Exists(destination))
+        {
+          FileAttributes existingAttributes = File.GetAttributes(destination);
+          if ((existingAttributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+            File.SetAttributes(destination, existingAttributes & ~FileAttributes.ReadOnly);
+        }
+
         using Stream entryStream = entry.Open();
         using FileStream destinationStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length, FileOptions.SequentialScan);
         int bytesRead;
