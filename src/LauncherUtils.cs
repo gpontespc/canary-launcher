@@ -12,12 +12,25 @@ namespace CanaryLauncherUpdate
     internal static class LauncherUtils
     {
         public const string DefaultLauncherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
+        public const string DefaultLauncherConfigFallbackUrl = "https://axtbvbltppuw.objectstorage.sa-vinhedo-1.oci.customer-oci.com/n/axtbvbltppuw/b/bucket-client/o/launcher_config.json";
 
         public static string GetLauncherConfigUrl(ClientConfig config)
         {
             if (!string.IsNullOrWhiteSpace(config?.newConfigUrl))
                 return config.newConfigUrl;
             return DefaultLauncherConfigUrl;
+        }
+
+        public static bool TryGetFallbackLauncherConfigUrl(string currentUrl, out string fallbackUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(currentUrl) && string.Equals(currentUrl, DefaultLauncherConfigUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                fallbackUrl = DefaultLauncherConfigFallbackUrl;
+                return true;
+            }
+
+            fallbackUrl = null;
+            return false;
         }
 
         public static string GetLauncherPath(ClientConfig config, bool onlyBaseDirectory = false)
