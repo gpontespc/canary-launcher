@@ -1,5 +1,5 @@
 {
-  "clientVersion": "15.11.20250015",
+  "clientVersion": "15.11.20250014",
   "launcherVersion": "1.0",
   "replaceFolders": true,
   "replaceFolderName": [
@@ -14,7 +14,7 @@
     }
   ],
   "clientFolder": "Tibia",
-  "newClientUrl": "https://axtbvbltppuw.objectstorage.sa-vinhedo-1.oci.customer-oci.com/n/axtbvbltppuw/b/bucket-client/o/balrogot-1511.zip",
+  "newClientUrl": "https://balrogot.com.br/download-client/balrogot-1511.zip",
   "assetsUrl": "https://axtbvbltppuw.objectstorage.sa-vinhedo-1.oci.customer-oci.com/n/axtbvbltppuw/b/bucket-client/o/assets.zip",
   "clientExecutable": "client.exe",
   "clientPriority": "High"
