@@ -28,8 +28,8 @@ namespace CanaryLauncherUpdate
             public bool HasTimestamp => !string.IsNullOrEmpty(Timestamp);
         }
 
-        public const string DefaultLauncherConfigUrl = "https://raw.githubusercontent.com/gpontespc/canary-launcher/main/launcher_config.json";
-        public const string DefaultLauncherConfigFallbackUrl = "https://axtbvbltppuw.objectstorage.sa-vinhedo-1.oci.customer-oci.com/n/axtbvbltppuw/b/bucket-client/o/launcher_config.json";
+        public const string DefaultLauncherConfigUrl = "https://raw.githubusercontent.com/balrogotserver-sketch/canary-launcher/refs/heads/main/launcher_config.json";
+        public const string DefaultLauncherConfigFallbackUrl = "https://objectstorage.sa-vinhedo-1.oraclecloud.com/n/axts9sx3tmyo/b/bucket-client/o/launcher_config.json";
 
         public static string GetLauncherConfigUrl(ClientConfig config)
         {
