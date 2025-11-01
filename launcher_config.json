@@ -15,7 +15,7 @@
   ],
   "clientFolder": "Tibia",
   "newClientUrl": "https://balrogot.com.br/download-client/balrogot-1511.zip",
-  "assetsUrl": "https://objectstorage.sa-vinhedo-1.oraclecloud.com/n/axts9sx3tmyo/b/bucket-client/o/assets.zip",
+  "assetsUrl": "https://axts9sx3tmyo.objectstorage.sa-vinhedo-1.oci.customer-oci.com/n/axts9sx3tmyo/b/bucket-client/o/assets.zip",
   "clientExecutable": "client.exe",
   "clientPriority": "High"
 }

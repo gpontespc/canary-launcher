@@ -29,7 +29,7 @@ namespace CanaryLauncherUpdate
         }
 
         public const string DefaultLauncherConfigUrl = "https://raw.githubusercontent.com/balrogotserver-sketch/canary-launcher/refs/heads/main/launcher_config.json";
-        public const string DefaultLauncherConfigFallbackUrl = "https://objectstorage.sa-vinhedo-1.oraclecloud.com/n/axts9sx3tmyo/b/bucket-client/o/launcher_config.json";
+        public const string DefaultLauncherConfigFallbackUrl = "https://axts9sx3tmyo.objectstorage.sa-vinhedo-1.oci.customer-oci.com/n/axts9sx3tmyo/b/bucket-client/o/launcher_config.json";
 
         public static string GetLauncherConfigUrl(ClientConfig config)
         {
