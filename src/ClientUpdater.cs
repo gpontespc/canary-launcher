@@ -12,6 +12,7 @@ namespace CanaryLauncherUpdate
   internal sealed class ClientUpdater
   {
     static readonly HashSet<string> PreserveFolders = new HashSet<string>(new[] { "conf", "characterdata" }, StringComparer.OrdinalIgnoreCase);
+    static readonly HashSet<string> AlwaysReplaceEntries = new HashSet<string>(new[] { "conf/config.ini" }, StringComparer.OrdinalIgnoreCase);
 
     readonly DownloadManager downloadManager;
     readonly ClientVersionStore versionStore;
@@ -199,7 +200,7 @@ namespace CanaryLauncherUpdate
       foreach (ZipArchiveEntry entry in archive.Entries)
       {
         string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length > 0 && alreadyPresent.Contains(parts[0]))
+        if (parts.Length > 0 && alreadyPresent.Contains(parts[0]) && !IsAlwaysReplaceEntry(parts))
           continue;
         entriesToExtract.Add(entry);
       }
@@ -214,7 +215,7 @@ namespace CanaryLauncherUpdate
       foreach (ZipArchiveEntry entry in entriesToExtract)
       {
         string[] parts = entry.FullName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length > 0 && alreadyPresent.Contains(parts[0]))
+        if (parts.Length > 0 && alreadyPresent.Contains(parts[0]) && !IsAlwaysReplaceEntry(parts))
           continue;
 
         string destination = Path.Combine(clientPath, entry.FullName);
@@ -256,6 +257,15 @@ namespace CanaryLauncherUpdate
 
       if (lastProgress < 100)
         progress?.Report(100);
+    }
+
+    static bool IsAlwaysReplaceEntry(string[] parts)
+    {
+      if (parts == null || parts.Length == 0)
+        return false;
+
+      string normalized = string.Join("/", parts);
+      return AlwaysReplaceEntries.Contains(normalized);
     }
 
     static HashSet<string> GetTopLevelFolders(string zipPath)
